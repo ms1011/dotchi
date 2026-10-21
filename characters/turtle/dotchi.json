@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "id": "turtle",
+  "name": {
+    "ko": "거북이",
+    "en": "Turtle",
+    "ja": "カメ",
+    "zh": "乌龟"
+  },
+  "author": "dotchi",
+  "frameMs": 110
+}

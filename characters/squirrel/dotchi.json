@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "id": "squirrel",
+  "name": {
+    "ko": "다람쥐",
+    "en": "Squirrel",
+    "ja": "リス",
+    "zh": "松鼠"
+  },
+  "author": "dotchi",
+  "frameMs": 250
+}

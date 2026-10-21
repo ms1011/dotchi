@@ -1,0 +1,9 @@
+__pycache__/
+.claude-plugin/types/
+docs/superpowers/
+.superpowers/
+*/preview.png
+*/preview.gif
+characters/*/preview.png
+characters/*/preview.gif
+.DS_Store

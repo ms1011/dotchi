@@ -1,0 +1,8 @@
+{
+  "name": "dotchi",
+  "version": "0.1.0",
+  "description": "Hatch your own pixel-art pet from any image and keep it beside you in Claude Code",
+  "author": { "name": "ms1011" },
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}

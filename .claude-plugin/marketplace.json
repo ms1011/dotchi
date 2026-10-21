@@ -1,0 +1,5 @@
+{
+  "name": "dotchi",
+  "owner": { "name": "ms1011" },
+  "plugins": [{ "name": "dotchi", "source": "./" }]
+}
