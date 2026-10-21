@@ -25,7 +25,7 @@ dotchi 是 [Claude Code](https://docs.claude.com/en/docs/claude-code) 的一个 
 - 💬 **会说话。** 漫画气泡、Claude 工作时的加载台词，以及回答后的一句话（可选）。
 - 🪟 **输入框上方或侧边面板。** 可以把宠物放在右侧面板，回答使用其余的屏幕空间。
 - 📦 **分享角色包。** 每个角色就是一个小角色包。导出成 zip，任何人都能安装。
-- 🌏 **四种语言。** 韩语、英语、日语、简体中文，界面文字和台词都支持。
+- 🌏 **台词支持四种语言。** 宠物可以用韩语、英语、日语或简体中文说话。命令提示为英语。
 - 🐿️🐢 **一开始就有两只：** 抱着橡果的松鼠，以及其实跑得飞快的乌龟
 
 <p align="center">
@@ -76,7 +76,7 @@ claude plugin update dotchi
 | `/dotchi remove <角色>` | 删除我的角色 |
 | `/dotchi show always\|working\|side` | 始终显示 / 仅在 Claude 工作时 / 侧边面板 |
 | `/dotchi voice on\|off` | 回答后的一句话 |
-| `/dotchi lang ko\|en\|ja\|zh\|auto` | 界面和台词的语言（`auto` 跟随系统设置） |
+| `/dotchi lang ko\|en\|ja\|zh\|auto` | 宠物台词和名字的语言（`auto` 跟随系统设置） |
 
 **侧边面板。** `/dotchi show side` 会把宠物放到右侧面板（约占宽度 20%）。面板在全屏模式下会停靠在对话旁边，所以请先运行一次 `/tui fullscreen`。用 `Ctrl+X` 加方向键调整宽度，用 `Ctrl+X` 加 `X` 关闭。
 

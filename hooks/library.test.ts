@@ -40,7 +40,7 @@ test('폴더 팩 설치 → 목록에 생기고 바꿀 수 있다', async ($, on
   const engine = fakeEngine(on, { files: { ...BUILTINS, ...bunnyPack('ext/bunny') } })
   await $.session.start(SESSION)
   const result = await dotchi($, 'install /ext/bunny')
-  expect(result.text).toContain('토끼(bunny)')
+  expect(result.text).toContain('토끼 (bunny)')
   expect(Object.keys(engine.files)).toContain('data/characters/bunny/art.json')
   expect((await dotchi($, 'list')).text).toContain('bunny (토끼)')
   expect((await dotchi($, 'bunny')).text).toContain('토끼')
@@ -78,7 +78,7 @@ test('zip은 python3 zipfile로 풀고(폴더 하나 안, __MACOSX 섞임) tmp�
   }
   const engine = fakeEngine(on, { files: { ...BUILTINS, 'ext/bunny.zip': 'zip' }, zips: { '/ext/bunny.zip': inside } })
   await $.session.start(SESSION)
-  expect((await dotchi($, 'install /ext/bunny.zip')).text).toContain('토끼(bunny)')
+  expect((await dotchi($, 'install /ext/bunny.zip')).text).toContain('토끼 (bunny)')
   expect(engine.runs.some(argv => argv.join(' ').startsWith('python3 -m zipfile -e /ext/bunny.zip'))).toBe(true)
   expect(Object.keys(engine.files).some(k => k.startsWith('data/tmp/'))).toBe(false)
   expect(Object.keys(engine.files)).toContain('data/characters/bunny/lines.json')
@@ -112,7 +112,7 @@ test('기본 팩도 내보낼 수 있다', async ($, on) => {
 test('기본 팩은 못 지우고, 지금 캐릭터를 지우면 다람쥐로', async ($, on) => {
   const engine = fakeEngine(on, { files: { ...BUILTINS, ...packFiles('bunny', { name: '토끼', origin: 'user', art: artJson() }) } })
   await $.session.start(SESSION)
-  expect((await dotchi($, 'remove turtle')).text).toContain('기본 캐릭터')
+  expect((await dotchi($, 'remove turtle')).text).toContain('is built in')
   await dotchi($, 'bunny')
   expect((await dotchi($, 'remove bunny')).text).toContain('bunny')
   expect(Object.keys(engine.files).some(k => k.startsWith('data/characters/bunny'))).toBe(false)
@@ -171,6 +171,6 @@ test('복사한 뒤 실패하면 복사본을 지운다', async ($, on) => {
     run: argv => ({ exitCode: argv[0] === 'cp' || argv[0] === 'mkdir' || argv[0] === 'rm' ? 0 : 1 }),
   })
   await $.session.start(SESSION)
-  expect((await dotchi($, 'install /ext/bunny')).text).toContain('설치하지 못했어요')
+  expect((await dotchi($, 'install /ext/bunny')).text).toContain("Couldn't install")
   expect(engine.runs.some(argv => argv[0] === 'rm' && argv.at(-1)!.endsWith('/characters/bunny'))).toBe(true)
 })

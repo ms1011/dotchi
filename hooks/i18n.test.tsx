@@ -16,18 +16,13 @@ test('detectLang: LC_ALL → LC_MESSAGES → LANG, 네 언어가 아니면 en', 
   expect(detectLang({ LC_MESSAGES: 'zh_CN', LANG: 'en_US' })).toBe('zh')
 })
 
-test('네 언어 모두 같은 문구 키가 있고 비어 있지 않다', () => {
-  const keys = Object.keys(MESSAGES.ko).sort()
-  for (const lang of ['en', 'ja', 'zh'] as const) {
-    expect(Object.keys(MESSAGES[lang]).sort()).toEqual(keys)
-  }
-  for (const lang of ['ko', 'en', 'ja', 'zh'] as const) {
-    for (const key of keys) expect((MESSAGES[lang] as Record<string, string>)[key]!.trim().length > 0).toBe(true)
-  }
+test('안내 문구는 영어 하나뿐이고 비어 있지 않다', () => {
+  for (const text of Object.values(MESSAGES)) expect(text.trim().length > 0).toBe(true)
+  expect(t('status', { name: 'x', show: 'y', voice: 'z' })).toBe('Now: x · Shown: y · One-liner after answers: z')
 })
 
 test('t는 {이름} 자리를 채운다', () => {
-  expect(t('ko', 'unknownCharacter', { arg: 'bunny' })).toContain("'bunny'")
+  expect(t('unknownCharacter', { arg: 'bunny' })).toBe("No character 'bunny'. See /dotchi list")
 })
 
 test('parseDotchi lang', () => {
@@ -38,22 +33,18 @@ test('parseDotchi lang', () => {
 
 const setup = (on: On, env: Record<string, string> = {}) => fakeEngine(on, { files: BUILTINS, env })
 
-test('/dotchi lang ja 후 상태 문구가 일본어, 이름은 일본어가 없으면 영어', async ($, on) => {
+test('/dotchi lang ja는 대사·이름 언어만 바꾸고 안내는 영어 그대로 (이름은 일본어가 없으면 영어)', async ($, on) => {
   const { stored } = setup(on)
   await $.session.start(SESSION)
   await dotchi($, 'lang ja')
   expect((stored.settings as { lang: string }).lang).toBe('ja')
-  expect((await dotchi($, '')).text).toBe(
-    t('ja', 'status', { name: 'Squirrel', show: t('ja', 'show.working'), voice: t('ja', 'voiceOff') }),
-  )
+  expect((await dotchi($, '')).text).toBe('Now: Squirrel · Shown: while working · One-liner after answers: off')
 })
 
-test('lang auto면 컴퓨터 언어를 따른다', async ($, on) => {
-  setup(on, { LANG: 'en_US.UTF-8' })
+test('lang auto면 대사·이름은 컴퓨터 언어를 따르고, 안내는 어느 언어든 영어', async ($, on) => {
+  setup(on, { LANG: 'ko_KR.UTF-8' })
   await $.session.start(SESSION)
-  expect((await dotchi($, '')).text).toBe(
-    t('en', 'status', { name: 'Squirrel', show: t('en', 'show.working'), voice: t('en', 'voiceOff') }),
-  )
+  expect((await dotchi($, '')).text).toBe('Now: 다람쥐 · Shown: while working · One-liner after answers: off')
 })
 
 test('팩에 지금 언어 대사가 없으면 영어 대사로 말풍선', async ($, on) => {

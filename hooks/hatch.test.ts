@@ -31,7 +31,7 @@ test('hatch는 치환된 지시로 Claude 턴을 시작한다', async ($, on) =>
   const { submitted, clock } = setup(on)
   await $.session.start(SESSION)
   const result = await dotchi($, 'hatch ~/a.png')
-  expect(result.text).toContain('부화')
+  expect(result.text).toContain('hatch')
   await clock.settle()
   expect(submitted.length).toBe(1)
   expect(submitted[0]).toMatch(new RegExp(`^HATCH root=.+ data=${DATA} lang=ko talk=Korean image=${HOME}/a.png$`))

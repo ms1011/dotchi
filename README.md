@@ -25,7 +25,7 @@ dotchi is a mod for [Claude Code](https://docs.claude.com/en/docs/claude-code). 
 - 💬 **It talks.** A comic speech bubble, its own spinner lines while Claude works, and an optional one-liner after each answer.
 - 🪟 **Above the prompt or in a side panel.** Keep your pet in a panel on the right while answers use the rest of the screen.
 - 📦 **Share packs.** Every character is a small pack. Export it as a zip and anyone can install it.
-- 🌏 **Four languages.** Korean, English, Japanese and Simplified Chinese, for both the interface and the lines.
+- 🌏 **Lines in four languages.** Your pet can talk in Korean, English, Japanese or Simplified Chinese. Command messages are in English.
 - 🐿️🐢 **Two pets to start with:** a squirrel hugging an acorn, and a turtle that turns out to be very fast.
 
 <p align="center">
@@ -76,7 +76,7 @@ Everything is under `/dotchi`.
 | `/dotchi remove <character>` | Remove one of your characters |
 | `/dotchi show always\|working\|side` | Show always, only while Claude works, or in a side panel |
 | `/dotchi voice on\|off` | One-liner after each answer |
-| `/dotchi lang ko\|en\|ja\|zh\|auto` | Interface and line language (`auto` follows your system) |
+| `/dotchi lang ko\|en\|ja\|zh\|auto` | Language of the pet's lines and names (`auto` follows your system) |
 
 **Side panel.** `/dotchi show side` puts your pet in a panel on the right, about 20% of the width. It docks beside the conversation in fullscreen mode, so run `/tui fullscreen` once. Resize it with `Ctrl+X` then the arrow keys, and close it with `Ctrl+X` then `X`.
 

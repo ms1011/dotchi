@@ -38,7 +38,7 @@ test('/dotchi show side는 터미널 너비 20%로 옆 패널을 연다', async 
   const engine = setup(on)
   await $.session.start(SESSION)
   const result = await runCommand($, 'dotchi', 'show side', 237)
-  expect(result.text).toContain('옆 패널')
+  expect(result.text).toContain('side panel')
   expect(engine.opened.at(-1)).toEqual({ id: 'dotchi', columns: 47 })
 })
 

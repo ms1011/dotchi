@@ -99,12 +99,12 @@ export const register: Register = on => {
   const nameFor = (ch: Character | null) => (ch === null ? 'dotchi' : nameOf(ch.meta, lang()))
   const linesFor = (ch: Character | null) => (ch === null ? NO_LINES : pickLines(ch.lines, lang()))
   const status = (settings: Settings) =>
-    t(lang(), 'status', {
+    t('status', {
       name: nameFor(currentOf(settings)),
-      show: t(lang(), `show.${settings.show}`),
-      voice: t(lang(), settings.voice ? 'voiceOn' : 'voiceOff'),
+      show: t(`show.${settings.show}`),
+      voice: t(settings.voice ? 'voiceOn' : 'voiceOff'),
     })
-  const changed = (settings: Settings) => t(lang(), 'changed', { status: status(settings) })
+  const changed = (settings: Settings) => t('changed', { status: status(settings) })
 
   const perLineFor = (ch: Character | null) => ticksPerLine(ch === null ? 250 : frameMsOf(ch.meta))
 
@@ -150,16 +150,16 @@ export const register: Register = on => {
       case 'status':
         return { text: status(current) }
       case 'usage':
-        return { text: t(lang(), 'usage') }
+        return { text: t('usage') }
       case 'list': {
         characters = await loadCharacters($)
         const active = currentOf(current)?.meta.id
         const rows = characters.map(ch =>
-          t(lang(), 'listItem', {
+          t('listItem', {
             mark: ch.meta.id === active ? '▶ ' : '  ',
             id: ch.meta.id,
             name: nameFor(ch),
-            origin: t(lang(), `origin.${ch.origin}`),
+            origin: t(`origin.${ch.origin}`),
           }),
         )
         return { text: rows.join('\n') }
@@ -168,7 +168,7 @@ export const register: Register = on => {
         // 캐릭터를 고를 때마다(지금 캐릭터여도) 팩을 다시 읽는다: 고친 그림이 바로 보이게
         characters = await loadCharacters($)
         const ch = resolveCharacter(command.target, characters, lang())
-        if (ch === null) return { text: t(lang(), 'unknownCharacter', { arg: command.target }) }
+        if (ch === null) return { text: t('unknownCharacter', { arg: command.target }) }
         const settings = { ...current, character: ch.meta.id }
         $.ui.invalidate('ui.render')
         await saveSettings($, settings)
@@ -184,29 +184,29 @@ export const register: Register = on => {
         const result = await installPack($, command.path, new Set(characters.map(ch => ch.meta.id)))
         if ('error' in result) {
           const { error } = result
-          const reason = t(lang(), `reason.${error.reason}`, {
+          const reason = t(`reason.${error.reason}`, {
             path: 'path' in error ? error.path : '',
             file: 'file' in error ? error.file : '',
           })
-          return { text: t(lang(), 'installFailed', { reason }) }
+          return { text: t('installFailed', { reason }) }
         }
         characters = await loadCharacters($)
         const vars = { id: result.id, name: nameFor(result.character) }
-        return { text: t(lang(), result.renamed ? 'installedRenamed' : 'installed', vars) }
+        return { text: t(result.renamed ? 'installedRenamed' : 'installed', vars) }
       }
       case 'export': {
         characters = await loadCharacters($)
         const ch = resolveCharacter(command.target, characters, lang())
-        if (ch === null) return { text: t(lang(), 'unknownCharacter', { arg: command.target }) }
+        if (ch === null) return { text: t('unknownCharacter', { arg: command.target }) }
         const out = await exportPack($, ch, command.withSource)
-        return { text: out === null ? t(lang(), 'exportFailed') : t(lang(), 'exported', { path: out }) }
+        return { text: out === null ? t('exportFailed') : t('exported', { path: out }) }
       }
       case 'remove': {
         characters = await loadCharacters($)
         const ch = resolveCharacter(command.target, characters, lang())
-        if (ch === null) return { text: t(lang(), 'unknownCharacter', { arg: command.target }) }
+        if (ch === null) return { text: t('unknownCharacter', { arg: command.target }) }
         if (ch.origin === 'builtin' || !ch.dir.startsWith(await dataDir($))) {
-          return { text: t(lang(), 'cannotRemoveBuiltin', { id: ch.meta.id }) }
+          return { text: t('cannotRemoveBuiltin', { id: ch.meta.id }) }
         }
         await removePack($, ch)
         characters = await loadCharacters($)
@@ -214,11 +214,11 @@ export const register: Register = on => {
           await saveSettings($, { ...current, character: DEFAULT_SETTINGS.character })
           $.ui.invalidate('ui.render')
         }
-        return { text: t(lang(), 'removed', { id: ch.meta.id }) }
+        return { text: t('removed', { id: ch.meta.id }) }
       }
       case 'hatch': {
         const template = await readPrompt($, 'tools/hatch-prompt.md')
-        if (template === null) return { text: t(lang(), 'promptMissing', { file: 'tools/hatch-prompt.md' }) }
+        if (template === null) return { text: t('promptMissing', { file: 'tools/hatch-prompt.md' }) }
         const text = fill(template, {
           root: $.plugin.root,
           data: await dataDir($),
@@ -226,15 +226,15 @@ export const register: Register = on => {
           langName: LANG_NAMES[lang()],
           image: command.image ?? '',
         })
-        await handToClaude($, text, t(lang(), 'promptMissing', { file: 'prompt' }))
-        return { text: t(lang(), 'hatchStarted') }
+        await handToClaude($, text, t('promptMissing', { file: 'prompt' }))
+        return { text: t('hatchStarted') }
       }
       case 'edit': {
         characters = await loadCharacters($)
         const ch = resolveCharacter(command.target, characters, lang())
-        if (ch === null) return { text: t(lang(), 'unknownCharacter', { arg: command.target }) }
+        if (ch === null) return { text: t('unknownCharacter', { arg: command.target }) }
         const template = await readPrompt($, 'tools/edit-prompt.md')
-        if (template === null) return { text: t(lang(), 'promptMissing', { file: 'tools/edit-prompt.md' }) }
+        if (template === null) return { text: t('promptMissing', { file: 'tools/edit-prompt.md' }) }
         const dir = ch.origin === 'builtin' ? await copyToUser($, ch) : ch.dir
         const text = fill(template, {
           root: $.plugin.root,
@@ -245,8 +245,8 @@ export const register: Register = on => {
           name: safeName(nameFor(ch), ch.meta.id),
           dir,
         })
-        await handToClaude($, text, t(lang(), 'promptMissing', { file: 'prompt' }))
-        return { text: t(lang(), 'editStarted', { name: nameFor(ch) }) }
+        await handToClaude($, text, t('promptMissing', { file: 'prompt' }))
+        return { text: t('editStarted', { name: nameFor(ch) }) }
       }
       case 'lang': {
         const settings = { ...current, lang: command.lang }
