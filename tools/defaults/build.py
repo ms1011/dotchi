@@ -23,13 +23,17 @@ NAMES = {
     'squirrel': {'ko': '다람쥐', 'en': 'Squirrel', 'ja': 'リス', 'zh': '松鼠'},
     'turtle': {'ko': '거북이', 'en': 'Turtle', 'ja': 'カメ', 'zh': '乌龟'},
 }
+DESCRIPTIONS = {
+    'squirrel': 'A busy squirrel that hugs an acorn and gathers ideas while Claude works.',
+    'turtle': 'Looks laid-back, but sprints like the wind whenever Claude is working.',
+}
 
 
 def build(pid, module):
     draw = getattr(module, 'turtle' if pid == 'turtle' else pid)
     pack = CHARACTERS / pid
     pack.mkdir(parents=True, exist_ok=True)
-    meta = {'format': 1, 'id': pid, 'name': NAMES[pid], 'author': 'dotchi', 'frameMs': module.FRAME_MS}
+    meta = {'format': 1, 'id': pid, 'name': NAMES[pid], 'author': 'dotchi', 'description': DESCRIPTIONS[pid], 'frameMs': module.FRAME_MS}
     (pack / 'dotchi.json').write_text(json.dumps(meta, ensure_ascii=False, indent=2) + '\n')
     pixels.save_art(pack, draw(**module.IDLE), [draw(**pose) for pose in module.POSES])
     pixels.export_pack(pack)
