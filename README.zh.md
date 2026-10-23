@@ -152,6 +152,21 @@ Claude 会一次问一个问题，带你完成：
 | `~/.claude/dotchi/drafts/` | 正在孵化或修改的角色 |
 | `~/.claude/dotchi/venv/` | 图像处理工具 |
 
+## dotchi 会发送和获取什么
+
+dotchi 本身没有任何统计或遥测。显示宠物、切换、修改、导出，以及从 zip 或文件夹安装，都只在你的电脑上进行。只有下面这些命令会联网：
+
+| 什么时候 | 做什么 |
+| :- | :- |
+| 第一次 `/dotchi hatch` | `tools/setup.sh` 创建 `~/.claude/dotchi/venv`，并从 PyPI 安装 numpy、opencv-python-headless、pillow，版本固定在 `tools/requirements.lock` 中。图片在你的电脑上处理。图片和预览会像你在对话中给 Claude 看的其他文件一样由 Claude 读取。 |
+| `/dotchi install <id 或链接>` | 从 `https://ms1011.github.io/dotchi-packs/packs/<id>/` 下载该宠物的 `dotchi.json`、`art.json`、`lines.json`。除了这些下载请求之外，不会发送任何关于你或你的宠物的信息。 |
+| `/dotchi share <角色>` | 读取 `https://ms1011.github.io/dotchi-packs/index.json` 来检查 id 是否已被占用，并运行 `gh auth status` 和 `gh api user` 获取你的 GitHub 用户 id。然后用 `gh issue create` 以你的 GitHub 账号在 [ms1011/dotchi-packs](https://github.com/ms1011/dotchi-packs) 上创建一个**公开** Issue。Issue 中包含宠物的名字和简介，以及角色包（`dotchi.json`、`art.json`、`lines.json`、`grid/*.txt`，gzip 压缩）。原始图片（`source/`）不会发送。发布后，网站上会显示宠物和你的 GitHub 用户名。 |
+| `/dotchi unshare <角色>` | 运行 `gh auth status`，然后在 ms1011/dotchi-packs 上创建一个公开 Issue，请求撤下该宠物。 |
+
+dotchi 不会直接读取你的 GitHub 令牌，`gh` 使用你通过 `gh auth login` 设置的登录。分享的宠物是公开的：请只分享用你自己画的、拍的或有权分享的图片做成的宠物。
+
+[dotchi 宠物网站](https://ms1011.github.io/dotchi-packs)在浏览器中运行。它从 GitHub Pages 加载宠物，并向 `api.github.com` 查询每只宠物的 👍 数。
+
 ## 开发
 
 ```sh

@@ -152,6 +152,21 @@ Claude가 한 번에 하나씩 물어보면서 진행해요.
 | `~/.claude/dotchi/drafts/` | 부화·다듬기 중인 캐릭터 |
 | `~/.claude/dotchi/venv/` | 영상처리 도구 |
 
+## 도찌가 보내고 받는 것
+
+도찌에는 분석이나 사용 기록 전송이 없어요. 펫 보여 주기, 바꾸기, 다듬기, 내보내기, zip·폴더로 설치하기는 모두 내 컴퓨터 안에서만 일어나요. 네트워크를 쓰는 건 아래 명령뿐이에요.
+
+| 언제 | 하는 일 |
+| :- | :- |
+| 처음 `/dotchi hatch` | `tools/setup.sh`가 `~/.claude/dotchi/venv`를 만들고 PyPI에서 numpy, opencv-python-headless, pillow를 설치해요. 버전은 `tools/requirements.lock`에 고정돼 있어요. 그림 처리는 내 컴퓨터에서 해요. 그림과 미리보기는 대화에 보여 주는 다른 파일처럼 Claude가 읽어요. |
+| `/dotchi install <id 또는 링크>` | 그 펫의 `dotchi.json`, `art.json`, `lines.json`을 `https://ms1011.github.io/dotchi-packs/packs/<id>/`에서 받아요. 이 다운로드 요청 말고는 나나 내 펫에 대한 어떤 정보도 보내지 않아요. |
+| `/dotchi share <캐릭터>` | id가 이미 쓰이는지 보려고 `https://ms1011.github.io/dotchi-packs/index.json`을 읽고, 내 GitHub 사용자 id를 알려고 `gh auth status`와 `gh api user`를 실행해요. 그다음 `gh issue create`로 [ms1011/dotchi-packs](https://github.com/ms1011/dotchi-packs)에 내 GitHub 계정으로 **공개** Issue를 열어요. Issue에는 펫 이름과 소개, 팩(`dotchi.json`, `art.json`, `lines.json`, `grid/*.txt`를 gzip으로 묶은 것)이 들어가요. 원본 그림(`source/`)은 보내지 않아요. 게시되면 사이트에 펫과 내 GitHub 아이디가 보여요. |
+| `/dotchi unshare <캐릭터>` | `gh auth status`를 실행한 뒤 ms1011/dotchi-packs에 그 펫을 내려 달라는 공개 Issue를 열어요. |
+
+도찌는 GitHub 토큰을 직접 읽지 않아요. `gh`가 `gh auth login`으로 해 둔 로그인을 써요. 올린 펫은 공개돼요. 직접 그렸거나 찍었거나, 공유할 권리가 있는 그림으로 만든 펫만 올려 주세요.
+
+[도찌 펫 사이트](https://ms1011.github.io/dotchi-packs)는 브라우저에서 돌아가요. 펫은 GitHub Pages에서 받고, 펫마다 👍 수를 `api.github.com`에 물어요.
+
 ## 개발
 
 ```sh

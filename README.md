@@ -152,6 +152,21 @@ A pack is a folder (or a zip of one):
 | `~/.claude/dotchi/drafts/` | Characters being hatched or edited |
 | `~/.claude/dotchi/venv/` | Image-processing tools |
 
+## What dotchi sends and fetches
+
+dotchi itself has no analytics or telemetry. Showing your pet, switching, editing, exporting and installing from a zip or folder all stay on your computer. Only these commands touch the network:
+
+| When | What happens |
+| :- | :- |
+| The first `/dotchi hatch` | `tools/setup.sh` creates `~/.claude/dotchi/venv` and installs numpy, opencv-python-headless and pillow from PyPI, pinned in `tools/requirements.lock`. The picture is processed on your computer. Claude reads the picture and the previews in your conversation, like any file you show it. |
+| `/dotchi install <id or link>` | Downloads `dotchi.json`, `art.json` and `lines.json` of that pet from `https://ms1011.github.io/dotchi-packs/packs/<id>/`. Only these download requests are made; nothing else about you or your pets is sent. |
+| `/dotchi share <character>` | Reads `https://ms1011.github.io/dotchi-packs/index.json` to see whether the id is taken, and runs `gh auth status` and `gh api user` to get your GitHub user id. Then `gh issue create` opens a **public** issue on [ms1011/dotchi-packs](https://github.com/ms1011/dotchi-packs) under your GitHub account. The issue holds the pet's name and description and the pack (`dotchi.json`, `art.json`, `lines.json`, `grid/*.txt`, gzipped). Your original pictures (`source/`) are never sent. Once published, the pet and your GitHub login are shown on the site. |
+| `/dotchi unshare <character>` | Runs `gh auth status`, then opens a public issue on ms1011/dotchi-packs asking to take that pet down. |
+
+dotchi never reads your GitHub token. `gh` uses the login you set up with `gh auth login`. Shared pets are public: only share pets made from pictures you drew, photographed or otherwise have the right to share.
+
+The [dotchi pets site](https://ms1011.github.io/dotchi-packs) runs in your browser. It loads the pets from GitHub Pages and asks `api.github.com` for each pet's 👍 count.
+
 ## Development
 
 ```sh

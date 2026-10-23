@@ -152,6 +152,21 @@ Claude が一度にひとつずつ質問しながら進めます。
 | `~/.claude/dotchi/drafts/` | ふ化・手直し中のキャラクター |
 | `~/.claude/dotchi/venv/` | 画像処理ツール |
 
+## dotchi が送るもの・受け取るもの
+
+dotchi には分析や利用状況の送信はありません。ペットの表示、切り替え、編集、書き出し、zip やフォルダーからのインストールはすべて手元のコンピューターの中で完結します。ネットワークを使うのは次のコマンドだけです。
+
+| いつ | 何をするか |
+| :- | :- |
+| 初めての `/dotchi hatch` | `tools/setup.sh` が `~/.claude/dotchi/venv` を作り、PyPI から numpy・opencv-python-headless・pillow をインストールします。バージョンは `tools/requirements.lock` で固定しています。絵の処理は手元で行います。絵とプレビューは、会話で見せるほかのファイルと同じように Claude が読みます。 |
+| `/dotchi install <id またはリンク>` | そのペットの `dotchi.json`・`art.json`・`lines.json` を `https://ms1011.github.io/dotchi-packs/packs/<id>/` からダウンロードします。このダウンロードのリクエスト以外に、あなたやあなたのペットについての情報は送りません。 |
+| `/dotchi share <キャラクター>` | id が使われていないか確かめるために `https://ms1011.github.io/dotchi-packs/index.json` を読み、GitHub のユーザー id を知るために `gh auth status` と `gh api user` を実行します。そのあと `gh issue create` で [ms1011/dotchi-packs](https://github.com/ms1011/dotchi-packs) にあなたの GitHub アカウントで**公開**の Issue を作ります。Issue にはペットの名前と紹介、パック（`dotchi.json`・`art.json`・`lines.json`・`grid/*.txt` を gzip にまとめたもの）が入ります。元の絵（`source/`）は送りません。公開されると、サイトにペットとあなたの GitHub ユーザー名が表示されます。 |
+| `/dotchi unshare <キャラクター>` | `gh auth status` を実行してから、ms1011/dotchi-packs にそのペットの取り下げを頼む公開 Issue を作ります。 |
+
+dotchi が GitHub のトークンを直接読むことはありません。`gh` が `gh auth login` で設定したログインを使います。公開したペットは誰でも見られます。自分で描いた絵や撮った写真など、共有する権利のある絵から作ったペットだけを公開してください。
+
+[dotchi ペットサイト](https://ms1011.github.io/dotchi-packs)はブラウザーで動きます。ペットは GitHub Pages から読み込み、ペットごとの 👍 の数を `api.github.com` に問い合わせます。
+
 ## 開発
 
 ```sh
