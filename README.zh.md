@@ -1,6 +1,7 @@
 <div align="center">
 
-<img src="assets/squirrel.gif" alt="摇尾巴的松鼠 dotchi" width="200"> <img src="assets/turtle.gif" alt="全速冲刺的乌龟 dotchi" width="200">
+<img src="assets/squirrel.gif" alt="摇尾巴的松鼠 dotchi" width="200"> <img src="assets/turtle.gif" alt="全速冲刺的乌龟 dotchi" width="200"><br>
+<img src="assets/tiger.gif" alt="摇尾巴的老虎 dotchi" width="120"> <img src="assets/shiba.gif" alt="摇尾巴的柴犬 dotchi" width="120"> <img src="assets/panda.gif" alt="啃竹子的熊猫 dotchi" width="120"> <img src="assets/eagle.gif" alt="扇动翅膀的白头海雕 dotchi" width="120">
 
 # dotchi
 
@@ -26,7 +27,7 @@ dotchi 是 [Claude Code](https://docs.claude.com/en/docs/claude-code) 的一个 
 - 🪟 **输入框上方或侧边面板。** 可以把宠物放在右侧面板，回答使用其余的屏幕空间。
 - 📦 **分享角色包。** 每个角色就是一个小角色包。一条命令就能发布到 [dotchi 宠物网站](https://ms1011.github.io/dotchi-packs)，也可以导出成 zip。
 - 🌏 **台词支持四种语言。** 宠物可以用韩语、英语、日语或简体中文说话。命令提示为英语。
-- 🐿️🐢 **一开始就有两只：** 抱着橡果的松鼠，以及其实跑得飞快的乌龟
+- 🐿️🐢 **一开始就有六只：** 抱着橡果的松鼠、其实跑得飞快的乌龟，以及每个国家一只：老虎 🐯（韩国）、柴犬 🐕（日本）、熊猫 🐼（中国）、白头海雕 🦅（美国）
 
 <p align="center">
   <img src="assets/screen-side.png" alt="左边正在写诗，右侧面板里的乌龟在全速冲刺" width="820">

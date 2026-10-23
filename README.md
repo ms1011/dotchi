@@ -1,6 +1,7 @@
 <div align="center">
 
-<img src="assets/squirrel.gif" alt="Squirrel dotchi wagging its tail" width="200"> <img src="assets/turtle.gif" alt="Turtle dotchi sprinting" width="200">
+<img src="assets/squirrel.gif" alt="Squirrel dotchi wagging its tail" width="200"> <img src="assets/turtle.gif" alt="Turtle dotchi sprinting" width="200"><br>
+<img src="assets/tiger.gif" alt="Tiger dotchi swishing its tail" width="120"> <img src="assets/shiba.gif" alt="Shiba dotchi wagging its tail" width="120"> <img src="assets/panda.gif" alt="Panda dotchi munching bamboo" width="120"> <img src="assets/eagle.gif" alt="Bald eagle dotchi flapping its wings" width="120">
 
 # dotchi
 
@@ -26,7 +27,7 @@ dotchi is a mod for [Claude Code](https://docs.claude.com/en/docs/claude-code). 
 - 🪟 **Above the prompt or in a side panel.** Keep your pet in a panel on the right while answers use the rest of the screen.
 - 📦 **Share packs.** Every character is a small pack. Share it on [the dotchi pets site](https://ms1011.github.io/dotchi-packs) with one command, or export it as a zip.
 - 🌏 **Lines in four languages.** Your pet can talk in Korean, English, Japanese or Simplified Chinese. Command messages are in English.
-- 🐿️🐢 **Two pets to start with:** a squirrel hugging an acorn, and a turtle that turns out to be very fast.
+- 🐿️🐢 **Six pets to start with:** a squirrel hugging an acorn, a turtle that turns out to be very fast, and one from each of our languages: a tiger 🐯 (Korea), a Shiba Inu 🐕 (Japan), a panda 🐼 (China) and a bald eagle 🦅 (USA).
 
 <p align="center">
   <img src="assets/screen-side.png" alt="The turtle sprinting in a side panel while a poem is written on the left" width="820">

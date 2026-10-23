@@ -1,6 +1,7 @@
 <div align="center">
 
-<img src="assets/squirrel.gif" alt="꼬리를 흔드는 다람쥐 도찌" width="200"> <img src="assets/turtle.gif" alt="전력 질주하는 거북이 도찌" width="200">
+<img src="assets/squirrel.gif" alt="꼬리를 흔드는 다람쥐 도찌" width="200"> <img src="assets/turtle.gif" alt="전력 질주하는 거북이 도찌" width="200"><br>
+<img src="assets/tiger.gif" alt="꼬리를 흔드는 호랑이 도찌" width="120"> <img src="assets/shiba.gif" alt="꼬리를 흔드는 시바견 도찌" width="120"> <img src="assets/panda.gif" alt="대나무를 먹는 판다 도찌" width="120"> <img src="assets/eagle.gif" alt="날갯짓하는 흰머리수리 도찌" width="120">
 
 # 도찌 (dotchi)
 
@@ -26,7 +27,7 @@
 - 🪟 **입력창 위 또는 옆 패널.** 펫을 오른쪽 패널에 두고 답변은 나머지 화면을 쓰게 할 수 있어요.
 - 📦 **팩 공유.** 캐릭터 하나가 작은 팩 하나예요. 명령 하나로 [도찌 펫 사이트](https://ms1011.github.io/dotchi-packs)에 올리거나 zip으로 내보낼 수 있어요.
 - 🌏 **대사 4개 언어.** 펫이 한국어, 영어, 일본어, 중국어(간체)로 말해요. 명령 안내 문구는 영어예요.
-- 🐿️🐢 **처음부터 두 마리:** 도토리를 안은 다람쥐, 알고 보니 엄청 빠른 거북이
+- 🐿️🐢 **처음부터 여섯 마리:** 도토리를 안은 다람쥐, 알고 보니 엄청 빠른 거북이, 그리고 나라마다 한 마리씩 호랑이 🐯(한국), 시바견 🐕(일본), 판다 🐼(중국), 흰머리수리 🦅(미국)
 
 <p align="center">
   <img src="assets/screen-side.png" alt="왼쪽에 시가 써지는 동안 오른쪽 옆 패널에서 질주하는 거북이" width="820">

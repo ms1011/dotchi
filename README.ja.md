@@ -1,6 +1,7 @@
 <div align="center">
 
-<img src="assets/squirrel.gif" alt="しっぽを振るリスの dotchi" width="200"> <img src="assets/turtle.gif" alt="全力疾走するカメの dotchi" width="200">
+<img src="assets/squirrel.gif" alt="しっぽを振るリスの dotchi" width="200"> <img src="assets/turtle.gif" alt="全力疾走するカメの dotchi" width="200"><br>
+<img src="assets/tiger.gif" alt="しっぽを振るトラの dotchi" width="120"> <img src="assets/shiba.gif" alt="しっぽを振る柴犬の dotchi" width="120"> <img src="assets/panda.gif" alt="笹を食べるパンダの dotchi" width="120"> <img src="assets/eagle.gif" alt="羽ばたくハクトウワシの dotchi" width="120">
 
 # dotchi（どっち）
 
@@ -26,7 +27,7 @@ dotchi は [Claude Code](https://docs.claude.com/en/docs/claude-code) 用の mod
 - 🪟 **入力欄の上か、サイドパネル。** ペットを右側のパネルに置き、返答は残りの画面を使えます。
 - 📦 **パックを共有。** キャラクター 1 体が小さなパック 1 つ。コマンド 1 つで [dotchi ペットサイト](https://ms1011.github.io/dotchi-packs) に公開するか、zip に書き出せます。
 - 🌏 **セリフは 4 言語。** ペットは韓国語・英語・日本語・中国語（簡体字）で話します。コマンドの案内は英語です。
-- 🐿️🐢 **最初から 2 体:** どんぐりを抱えたリスと、実はとても速いカメ
+- 🐿️🐢 **最初から 6 体:** どんぐりを抱えたリス、実はとても速いカメ、そして国ごとに 1 体ずつトラ 🐯（韓国）、柴犬 🐕（日本）、パンダ 🐼（中国）、ハクトウワシ 🦅（アメリカ）
 
 <p align="center">
   <img src="assets/screen-side.png" alt="左側に詩が書かれるあいだ、右側のサイドパネルで疾走するカメ" width="820">

@@ -35,6 +35,14 @@ class DefaultsTest(unittest.TestCase):
     def test_turtle_is_fast(self):
         self.check('turtle', 110)
 
+    def test_national_pets(self):
+        # 홍보하는 나라마다 하나: 한국 호랑이, 일본 시바견, 중국 판다, 미국 흰머리수리
+        for pid, frame_ms in (('tiger', 220), ('shiba', 200), ('panda', 300), ('eagle', 180)):
+            with self.subTest(pid):
+                self.check(pid, frame_ms)
+                meta = json.loads((CHARACTERS / pid / 'dotchi.json').read_text())
+                self.assertTrue(0 < len(meta['description']) <= 120)
+
 
 if __name__ == '__main__':
     unittest.main()
