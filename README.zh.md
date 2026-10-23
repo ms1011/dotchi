@@ -114,7 +114,7 @@ Claude 会一次问一个问题，带你完成：
 /dotchi unshare my-cat             # 撤下
 ```
 
-分享需要已登录 GitHub 的 `gh`。Issue 上会运行检查，通过后一两分钟内就会出现在网站上。点赞就是在 GitHub 上该宠物的 Issue 点 👍，所以需要 GitHub 账号；数字每小时更新一次。
+分享需要已登录 GitHub 的 `gh`。Issue 上会运行检查，通过后一两分钟内就会出现在网站上。点赞就是在 GitHub 上该宠物的 Issue 点 👍，所以需要 GitHub 账号；网站上的数字大约一分钟内就会更新。
 
 **作为文件。**
 

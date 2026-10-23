@@ -114,7 +114,7 @@ Change it later with `/dotchi edit <character>`.
 /dotchi unshare my-cat             # take it down
 ```
 
-Sharing needs `gh` logged in to GitHub. A check runs on the issue and the pet shows up on the site within a minute or two if it passes. Likes are 👍 reactions on the pet's issue on GitHub, so you need a GitHub account to like one; counts update every hour.
+Sharing needs `gh` logged in to GitHub. A check runs on the issue and the pet shows up on the site within a minute or two if it passes. Likes are 👍 reactions on the pet's issue on GitHub, so you need a GitHub account to like one; the site shows the new count within a minute or so.
 
 **As a file.**
 
