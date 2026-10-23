@@ -75,3 +75,20 @@ test('사이트가 깨진 팩을 주면 badPack 문구, 아무것도 남지 않�
   expect(Object.keys(engine.files).some(k => k.startsWith('data/characters/'))).toBe(false)
   expect(Object.keys(engine.files).some(k => k.startsWith('data/tmp/'))).toBe(false)
 })
+
+test('사이트의 펫이 내 펫과 똑같으면 -2를 만들지 않고 이미 있다고 알려 준다', async ($, on) => {
+  const engine = fakeEngine(on, { http: onSite('squirrel', BUILTINS) })
+  await $.session.start(SESSION)
+  expect((await dotchi($, 'install squirrel')).text).toBe('You already have 다람쥐 (squirrel). Switch with /dotchi squirrel')
+  expect(Object.keys(engine.files).some(k => k.startsWith('data/characters/'))).toBe(false)
+  expect(Object.keys(engine.files).some(k => k.startsWith('data/tmp/'))).toBe(false)
+})
+
+test('이름(id)만 겹치는 다른 펫은 -2로 설치하고 왜 그런지 알려 준다', async ($, on) => {
+  const engine = fakeEngine(on, { http: onSite('squirrel', packFiles('squirrel', { name: '남의 다람쥐' })) })
+  await $.session.start(SESSION)
+  expect((await dotchi($, 'install squirrel')).text).toContain(
+    "You already have a character called 'squirrel', so this one was installed as squirrel-2. Switch with /dotchi squirrel-2",
+  )
+  expect(Object.keys(engine.files)).toContain('data/characters/squirrel-2/art.json')
+})

@@ -1,6 +1,6 @@
 import type { EngineInterface } from 'claude-code'
 
-import type { Character, Lang, Origin, PackMeta } from '../types'
+import type { Art, Character, Lang, Origin, PackLines, PackMeta } from '../types'
 import { parseArt } from './dots'
 import { findPackRoot, LANGS, parseLines, parseMeta, uniqueId } from './packs'
 import type { Bundle } from './share'
@@ -56,7 +56,10 @@ export const resolveCharacter = (arg: string, chars: readonly Character[], _lang
   )
 }
 
-export type InstallResult = { id: string; character: Character; renamed: boolean } | { error: InstallError }
+export type InstallResult =
+  | { id: string; character: Character; renamed: boolean; wanted: string }
+  | { already: Character }
+  | { error: InstallError }
 export type InstallError = { reason: 'notFound'; path: string } | { reason: 'noPack' } | { reason: 'badPack'; file: string } | { reason: 'unzip' }
 
 type Entry = { path: string; isDir: boolean; isLink: boolean }
@@ -98,7 +101,7 @@ async function copyPackFiles($: EngineInterface, from: string, to: string, withS
 }
 
 /** 팩 폴더의 세 파일을 검사: 깨진 파일 이름을 돌려준다 */
-async function checkPack($: EngineInterface, dir: string): Promise<{ meta: PackMeta } | { file: string }> {
+async function checkPack($: EngineInterface, dir: string): Promise<{ meta: PackMeta; art: Art; lines: PackLines } | { file: string }> {
   const read = (name: string) =>
     $.fs
       .read(`${dir}/${name}`)
@@ -106,10 +109,16 @@ async function checkPack($: EngineInterface, dir: string): Promise<{ meta: PackM
       .catch(() => '')
   const meta = parseMeta(await read('dotchi.json'))
   if (meta === null) return { file: 'dotchi.json' }
-  if (parseArt(await read('art.json')) === null) return { file: 'art.json' }
-  if (parseLines(await read('lines.json')) === null) return { file: 'lines.json' }
-  return { meta }
+  const art = parseArt(await read('art.json'))
+  if (art === null) return { file: 'art.json' }
+  const lines = parseLines(await read('lines.json'))
+  if (lines === null) return { file: 'lines.json' }
+  return { meta, art, lines }
 }
+
+/** 이름·그림·대사가 모두 같은 펫인지 (파싱한 값으로 비교: 파일의 공백·순서는 상관없다) */
+const samePet = (a: { meta: PackMeta; art: Art; lines: PackLines }, b: { meta: PackMeta; art: Art; lines: PackLines }) =>
+  JSON.stringify([a.meta.name, a.art.idle, a.art.work, a.lines]) === JSON.stringify([b.meta.name, b.art.idle, b.art.work, b.lines])
 
 /** 명령 실행: 시작조차 못 하면 실패(exitCode 1)로 */
 async function run($: EngineInterface, argv: readonly string[]): Promise<{ exitCode: number }> {
@@ -117,7 +126,8 @@ async function run($: EngineInterface, argv: readonly string[]): Promise<{ exitC
 }
 
 /** zip 또는 폴더의 팩을 사용자 데이터 폴더에 설치. 실패하면 아무것도 남기지 않는다 */
-export async function installPack($: EngineInterface, path: string, taken: ReadonlySet<string>): Promise<InstallResult> {
+/** 똑같은 펫이 이미 있으면 설치하지 않고 already로 알려 준다. id만 겹치면 -2처럼 번호를 붙인다 */
+export async function installPack($: EngineInterface, path: string, existing: readonly Character[]): Promise<InstallResult> {
   if (!(await $.fs.exists(path).catch(() => false))) return { error: { reason: 'notFound', path } }
   const data = await dataDir($)
   const isZip = path.toLowerCase().endsWith('.zip')
@@ -134,6 +144,9 @@ export async function installPack($: EngineInterface, path: string, taken: Reado
     const dir = root === '' ? source : `${source}/${root}`
     const checked = await checkPack($, dir)
     if ('file' in checked) return { error: { reason: 'badPack', file: checked.file } }
+    const twin = existing.find(ch => ch.meta.id === checked.meta.id && samePet(ch, checked))
+    if (twin !== undefined) return { already: twin }
+    const taken = new Set(existing.map(ch => ch.meta.id))
 
     // 읽히지 않는 폴더가 남아 있어도 그 이름은 피한다 (그 안에 겹쳐 복사하지 않게)
     const leftovers = (await $.fs.list(`${data}/characters`).catch(() => [])).map(entry => entry.name)
@@ -150,7 +163,7 @@ export async function installPack($: EngineInterface, path: string, taken: Reado
     const installed = await readPack($, dest, 'user')
     return installed === null
       ? fail({ reason: 'badPack', file: 'dotchi.json' })
-      : { id, character: installed, renamed: id !== checked.meta.id }
+      : { id, character: installed, renamed: id !== checked.meta.id, wanted: checked.meta.id }
   } finally {
     if (isZip) await run($, ['rm', '-rf', tmp])
   }

@@ -221,19 +221,18 @@ export const register: Register = on => {
       }
       case 'install': {
         characters = await loadCharacters($)
-        const taken = new Set(characters.map(ch => ch.meta.id))
         // 있는 로컬 경로가 먼저. 없으면 사이트의 펫 id나 주소로 본다
         const remoteId = (await $.fs.exists(command.path).catch(() => false)) ? null : remoteIdOf(command.raw)
         let result
         if (remoteId === null) {
-          result = await installPack($, command.path, taken)
+          result = await installPack($, command.path, characters)
         } else {
           const fetched = await fetchRemotePack($, remoteId)
           if ('error' in fetched) {
             return { text: t(fetched.error === 'notOnSite' ? 'notOnSite' : 'siteUnreachable', { id: remoteId }) }
           }
           try {
-            result = await installPack($, fetched.dir, taken)
+            result = await installPack($, fetched.dir, characters)
           } finally {
             await $.process.run(['rm', '-rf', fetched.tmp]).catch(() => undefined)
           }
@@ -246,8 +245,11 @@ export const register: Register = on => {
           })
           return { text: t('installFailed', { reason }) }
         }
+        if ('already' in result) {
+          return { text: t('alreadyHave', { id: result.already.meta.id, name: nameFor(result.already) }) }
+        }
         characters = await loadCharacters($)
-        const vars = { id: result.id, name: nameFor(result.character) }
+        const vars = { id: result.id, name: nameFor(result.character), wanted: result.wanted }
         return { text: t(result.renamed ? 'installedRenamed' : 'installed', vars) }
       }
       case 'export': {
