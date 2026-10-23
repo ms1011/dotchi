@@ -3,7 +3,8 @@ import type { EngineInterface } from 'claude-code'
 import type { Character, Lang, Origin, PackMeta } from '../types'
 import { parseArt } from './dots'
 import { findPackRoot, LANGS, parseLines, parseMeta, uniqueId } from './packs'
-import { SITE } from './share'
+import type { Bundle } from './share'
+import { BUNDLE_FILE, SITE } from './share'
 
 /** 사용자 데이터 폴더: 플러그인을 업데이트해도 남는다 */
 export async function dataDir($: EngineInterface): Promise<string> {
@@ -190,6 +191,48 @@ export async function exportPack($: EngineInterface, ch: Character, withSource: 
   } finally {
     await run($, ['rm', '-rf', tmp])
   }
+}
+
+/**
+ * 사이트에 올릴 묶음: 세 JSON과 grid 격자만 담은 Bundle JSON을 gzip해 base64로.
+ * 원본 그림(source/)은 넣지 않는다. 실패하면 null
+ */
+export async function bundlePack($: EngineInterface, ch: Character): Promise<string | null> {
+  const tmp = `${await dataDir($)}/tmp/bundle-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
+  try {
+    const files: Record<string, string> = {}
+    for (const entry of await walk($, ch.dir)) {
+      if (!isPackFile(entry, false) || !BUNDLE_FILE.test(entry.path)) continue
+      files[entry.path] = String(await $.fs.read(`${ch.dir}/${entry.path}`))
+    }
+    const bundle: Bundle = { format: 1, files }
+    if ((await run($, ['mkdir', '-p', tmp])).exitCode !== 0) return null
+    await $.fs.write(`${tmp}/pack.json`, JSON.stringify(bundle))
+    if ((await run($, ['python3', '-m', 'gzip', `${tmp}/pack.json`])).exitCode !== 0) return null
+    const { base64 } = await $.fs.read(`${tmp}/pack.json.gz`, { as: 'bytes' })
+    return base64
+  } catch {
+    return null
+  } finally {
+    await run($, ['rm', '-rf', tmp])
+  }
+}
+
+/**
+ * 캐릭터 id 바꾸기: 사용자 데이터 폴더에 새 id로 복사하고 dotchi.json의 id도 바꾼다.
+ * 사용자 팩이면 옛 폴더를 지우고, 기본 팩은 그대로 둔다. 실패하면 새 폴더를 지우고 null
+ */
+export async function renamePack($: EngineInterface, ch: Character, newId: string): Promise<Character | null> {
+  const dest = `${await dataDir($)}/characters/${newId}`
+  const copied = await copyPackFiles($, ch.dir, dest, true)
+  if (copied) await $.fs.write(`${dest}/dotchi.json`, `${JSON.stringify({ ...ch.meta, id: newId }, null, 2)}\n`)
+  const renamed = copied ? await readPack($, dest, 'user') : null
+  if (renamed === null) {
+    await run($, ['rm', '-rf', dest])
+    return null
+  }
+  if (ch.origin === 'user') await run($, ['rm', '-rf', ch.dir])
+  return renamed
 }
 
 /** 사용자 팩 지우기 */

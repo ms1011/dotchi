@@ -103,6 +103,13 @@ const simulateShell = (files: Files, zips: Record<string, Files>, zipsOut: Recor
       for (const k of found) files[`${to}${k.slice(from.length)}`] = files[k]!
       return { exitCode: 0 }
     }
+    if (cmd === 'python3' && args[0] === '-m' && args[1] === 'gzip') {
+      // 흉내 gzip: 내용을 그대로 <파일>.gz에
+      const key = pathKey(files, args[2]!)
+      if (files[key] === undefined) return { exitCode: 1, stderr: 'no such file' }
+      files[`${key}.gz`] = files[key]!
+      return { exitCode: 0 }
+    }
     if (cmd === 'python3' && args[0] === '-m' && args[1] === 'zipfile') {
       if (args[2] === '-e') {
         const content = zips[args[3]!]
@@ -131,7 +138,8 @@ export const fakeEngine = (
     files?: Files
     placed?: boolean
     env?: Record<string, string>
-    run?: (argv: readonly string[]) => { exitCode: number; stdout?: string; stderr?: string }
+    /** 명령 흉내를 바꾼다. undefined를 돌려주면 기본 흉내(cp, rm, zipfile…)로 */
+    run?: (argv: readonly string[]) => { exitCode: number; stdout?: string; stderr?: string } | undefined
     /** 가짜 zip: zip 경로 → 그 안의 파일들(상대 경로) */
     zips?: Record<string, Files>
     /** 심볼릭 링크로 보일 파일 키 */
@@ -146,6 +154,7 @@ export const fakeEngine = (
   const writes: { path: string; text: string }[] = []
   const runs: string[][] = []
   const fetched: string[] = []
+  const stdins: (string | undefined)[] = []
   const opened: { id: string; columns?: number }[] = []
   const closed: string[] = []
   const stored: Record<string, unknown> = { ...options.store }
@@ -167,7 +176,7 @@ export const fakeEngine = (
     const key = toKey(files, e.path)
     const text = key === undefined ? undefined : files[key]
     if (text === undefined) throw new Error(`ENOENT: ${e.path}`)
-    return { value: text }
+    return { value: e.as === 'bytes' ? { base64: new TextEncoder().encode(text).toBase64() } : text }
   })
   on('fs.write', (_, e) => {
     writes.push({ path: e.path, text: e.text })
@@ -192,6 +201,7 @@ export const fakeEngine = (
   })
   on('process.run', (_, e) => {
     runs.push([...e.argv])
+    stdins.push(e.init?.stdin)
     const result = options.run?.(e.argv) ?? shell(e.argv)
     return {
       value: {
@@ -226,7 +236,7 @@ export const fakeEngine = (
     closed.push(e.id)
     return { value: undefined }
   })
-  return { files, toasts, reads, writes, runs, fetched, clock, stored, opened, closed, env, zipsOut }
+  return { files, toasts, reads, writes, runs, stdins, fetched, clock, stored, opened, closed, env, zipsOut }
 }
 
 export const SESSION = { cwd: '/work', surface: 'terminal', isInteractive: true } as const

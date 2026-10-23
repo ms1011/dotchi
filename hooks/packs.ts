@@ -3,7 +3,7 @@ import type { Lang, LineSet, PackLines, PackMeta } from '../types'
 export const LANGS: readonly Lang[] = ['ko', 'en', 'ja', 'zh']
 export const ID_PATTERN = /^[a-z0-9-]{1,32}$/
 /** 하위 명령 이름은 캐릭터 id로 못 쓴다 */
-export const RESERVED: readonly string[] = ['list', 'hatch', 'edit', 'install', 'export', 'remove', 'show', 'voice', 'lang']
+export const RESERVED: readonly string[] = ['list', 'hatch', 'edit', 'install', 'export', 'remove', 'show', 'voice', 'lang', 'share', 'unshare']
 
 export const isLang = (value: unknown): value is Lang => LANGS.includes(value as Lang)
 export const isId = (value: unknown): value is string =>

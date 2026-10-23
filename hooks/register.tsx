@@ -6,11 +6,22 @@ import { cropColumns, encodeFrame, halve, usedColumns } from './dots'
 import { detectLang, LANG_NAMES, t } from './i18n'
 import type { BandLayout } from './layout'
 import { bandLayout, paneLayout } from './layout'
-import { copyToUser, dataDir, exportPack, fetchRemotePack, installPack, loadCharacters, removePack, resolveCharacter } from './library'
+import {
+  bundlePack,
+  copyToUser,
+  dataDir,
+  exportPack,
+  fetchRemotePack,
+  installPack,
+  loadCharacters,
+  removePack,
+  renamePack,
+  resolveCharacter,
+} from './library'
 import { endingLine, idleLine, spinnerLine } from './lines'
-import { frameMsOf, nameOf, pickLines, ticksPerLine } from './packs'
+import { frameMsOf, isId, nameOf, pickLines, ticksPerLine } from './packs'
 import { DEFAULT_SETTINGS, normalizeSettings, parseDotchi } from './settings'
-import { remoteIdOf } from './share'
+import { PACKS_REPO, petPage, remoteIdOf, shareBody, SITE, suggestId, takenOf, unshareBody } from './share'
 
 const settingsAtom = atom({ plugin: 'dotchi', key: 'settings' } as const, DEFAULT_SETTINGS)
 const tickAtom = atom({ plugin: 'dotchi', key: 'tick' } as const, 0)
@@ -68,6 +79,34 @@ async function readPrompt($: EngineInterface, file: string): Promise<string | nu
     .read(`${$.plugin.root}/${file}`)
     .then(String)
     .catch(() => null)
+}
+
+/** gh가 쓸 수 있는지: 없거나(실행 못 함, 127) 로그인 안 됨 */
+async function ghStatus($: EngineInterface): Promise<'ok' | 'missing' | 'loggedOut'> {
+  const result = await $.process.run(['gh', 'auth', 'status']).catch(() => null)
+  if (result === null || result.exitCode === 127) return 'missing'
+  return result.exitCode === 0 ? 'ok' : 'loggedOut'
+}
+
+/** gh로 펫 보관 저장소에 Issue를 연다. 성공하면 Issue 주소, 실패하면 오류 첫 줄 */
+async function openIssue($: EngineInterface, title: string, body: string): Promise<{ url: string } | { reason: string }> {
+  const result = await $.process
+    .run(['gh', 'issue', 'create', '--repo', PACKS_REPO, '--title', title, '--body-file', '-'], { stdin: body, timeoutMs: 60000 })
+    .catch((error: unknown) => ({ exitCode: 1, stdout: '', stderr: String(error) }))
+  const lines = (text: string) => text.split('\n').map(line => line.trim()).filter(Boolean)
+  const url = lines(result.stdout).at(-1)
+  if (result.exitCode === 0 && url !== undefined) return { url }
+  return { reason: lines(result.stderr)[0] ?? `gh exited with ${result.exitCode}` }
+}
+
+/** 사이트에서 다른 사람이 이미 쓰는 id인지. 사이트나 gh에 물을 수 없으면 모른다고(false) 본다 */
+async function takenByOther($: EngineInterface, id: string): Promise<Record<string, number> | null> {
+  const response = await $.http.fetch(`${SITE}/index.json`).catch(() => null)
+  const taken = response?.ok ? takenOf(response.text) : null
+  if (taken === null || taken[id] === undefined) return null
+  const me = await $.process.run(['gh', 'api', 'user', '--jq', '.id']).catch(() => null)
+  const myId = me?.exitCode === 0 ? Number(me.stdout.trim()) : NaN
+  return Number.isFinite(myId) && taken[id] !== myId ? taken : null
 }
 
 /** 그림 한 컷을 Raster 칸으로: 양옆 빈칸은 잘라 말풍선을 머리에 붙인다 */
@@ -217,6 +256,49 @@ export const register: Register = on => {
         if (ch === null) return { text: t('unknownCharacter', { arg: command.target }) }
         const out = await exportPack($, ch, command.withSource)
         return { text: out === null ? t('exportFailed') : t('exported', { path: out }) }
+      }
+      case 'share': {
+        characters = await loadCharacters($)
+        let ch = resolveCharacter(command.target, characters, lang())
+        if (ch === null) return { text: t('unknownCharacter', { arg: command.target }) }
+        const gh = await ghStatus($)
+        if (gh !== 'ok') return { text: t(gh === 'missing' ? 'ghMissing' : 'ghLoggedOut') }
+        if (command.as !== null && command.as !== ch.meta.id) {
+          if (!isId(command.as)) return { text: t('asInvalid', { id: command.as }) }
+          if (characters.some(other => other.meta.id === command.as)) return { text: t('asExists', { id: command.as }) }
+          const wasCurrent = currentOf(current)?.meta.id === ch.meta.id
+          const renamed = await renamePack($, ch, command.as)
+          if (renamed === null) return { text: t('shareFailed', { reason: t('bundleFailed') }) }
+          ch = renamed
+          characters = await loadCharacters($)
+          if (wasCurrent) {
+            await saveSettings($, { ...current, character: ch.meta.id })
+            $.ui.invalidate('ui.render')
+          }
+        }
+        const id = ch.meta.id
+        const taken = await takenByOther($, id)
+        if (taken !== null) {
+          const suggestion = suggestId(id, new Set([...Object.keys(taken), ...characters.map(other => other.meta.id)]))
+          return { text: t('idTaken', { id, target: id, suggestion }) }
+        }
+        const bundle = await bundlePack($, ch)
+        if (bundle === null) return { text: t('shareFailed', { reason: t('bundleFailed') }) }
+        const body = shareBody({ id, name: nameFor(ch), description: ch.meta.description, bundle })
+        const opened = await openIssue($, `share: ${id}`, body)
+        if ('reason' in opened) return { text: t('shareFailed', { reason: opened.reason }) }
+        return { text: t('shared', { name: nameFor(ch), id, issue: opened.url, page: petPage(id) }) }
+      }
+      case 'unshare': {
+        // 내 컴퓨터에서 지운 펫도 내릴 수 있게: 캐릭터가 없으면 id 모양인지만 본다
+        characters = await loadCharacters($)
+        const id = resolveCharacter(command.target, characters, lang())?.meta.id ?? (isId(command.target) ? command.target : null)
+        if (id === null) return { text: t('usage') }
+        const gh = await ghStatus($)
+        if (gh !== 'ok') return { text: t(gh === 'missing' ? 'ghMissing' : 'ghLoggedOut') }
+        const opened = await openIssue($, `unshare: ${id}`, unshareBody(id))
+        if ('reason' in opened) return { text: t('shareFailed', { reason: opened.reason }) }
+        return { text: t('unshareRequested', { id, issue: opened.url }) }
       }
       case 'remove': {
         characters = await loadCharacters($)

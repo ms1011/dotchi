@@ -16,7 +16,7 @@ export const MESSAGES = {
   status: 'Now: {name} · Shown: {show} · One-liner after answers: {voice}',
   changed: 'Done. {status}',
   usage:
-    'Usage: /dotchi [character] · list · hatch [image path] · edit <character> · install <zip, folder or site id> · export <character> [--with-source] · remove <character> · show [always|working|side] · voice [on|off] · lang [ko|en|ja|zh|auto]',
+    'Usage: /dotchi [character] · list · hatch [image path] · edit <character> · install <zip, folder or site id> · export <character> [--with-source] · share <character> [--as <id>] · unshare <character> · remove <character> · show [always|working|side] · voice [on|off] · lang [ko|en|ja|zh|auto]',
   unknownCharacter: "No character '{arg}'. See /dotchi list",
   listItem: '{mark}{id} ({name}) · {origin}',
   'origin.builtin': 'built-in',
@@ -41,6 +41,15 @@ export const MESSAGES = {
   exported: 'Pack created: {path}',
   exportFailed: "Couldn't create the pack. Python 3 is required",
   removed: 'Removed {id}',
+  ghMissing: 'Sharing needs the GitHub CLI (gh). Install it from https://cli.github.com, run gh auth login, then try again',
+  ghLoggedOut: "gh isn't logged in. Run gh auth login, then try again",
+  idTaken: "'{id}' is already taken on the dotchi site. Try /dotchi share {target} --as {suggestion}",
+  asInvalid: "'{id}' can't be an id: use lowercase letters, digits and -, up to 32 characters",
+  asExists: "You already have a character called '{id}'",
+  shareFailed: "Couldn't open the share issue: {reason}",
+  bundleFailed: "couldn't bundle the pack. Python 3 is required",
+  shared: 'Sent {name} ({id}) to the dotchi site. The check posts its result there in a minute: {issue}\nPage: {page}',
+  unshareRequested: 'Asked to take down {id}. The result will be posted here: {issue}',
   cannotRemoveBuiltin: "{id} is built in and can't be removed",
 }
 

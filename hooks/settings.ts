@@ -27,6 +27,8 @@ export type DotchiCommand =
   | { kind: 'remove'; target: string }
   | { kind: 'hatch'; image: string | null }
   | { kind: 'edit'; target: string }
+  | { kind: 'share'; target: string; as: string | null }
+  | { kind: 'unshare'; target: string }
   | { kind: 'usage' }
 
 /** 경로 인자: 감싼 따옴표를 벗기고 앞의 ~를 홈 폴더로 */
@@ -59,6 +61,11 @@ export const parseDotchi = (args: string, home = ''): DotchiCommand => {
       ? { kind: 'export', target: second, withSource }
       : { kind: 'usage' }
   }
+  if (first === 'share') {
+    if (rest.length === 1) return { kind: 'share', target: second!, as: null }
+    return rest.length === 3 && rest[1] === '--as' ? { kind: 'share', target: second!, as: rest[2]! } : { kind: 'usage' }
+  }
+  if (first === 'unshare') return rest.length === 1 ? { kind: 'unshare', target: second! } : { kind: 'usage' }
   if (first === 'remove') return rest.length === 1 ? { kind: 'remove', target: second! } : { kind: 'usage' }
   if (first === 'list') return rest.length === 0 ? { kind: 'list' } : { kind: 'usage' }
   if (first === 'show') return rest.length === 1 && isShow(second) ? { kind: 'show', mode: second } : { kind: 'usage' }
