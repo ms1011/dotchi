@@ -24,7 +24,7 @@ dotchi は [Claude Code](https://docs.claude.com/en/docs/claude-code) 用の mod
 - 🎞️ **本物のピクセルアニメーション。** 絵全体をずらすのではなく、腕・脚・耳・しっぽ・車輪など選んだ部分が動きます。
 - 💬 **おしゃべりします。** マンガの吹き出し、Claude の作業中に出るスピナーのセリフ、返答のあとの一言（任意）。
 - 🪟 **入力欄の上か、サイドパネル。** ペットを右側のパネルに置き、返答は残りの画面を使えます。
-- 📦 **パックを共有。** キャラクター 1 体が小さなパック 1 つ。zip に書き出せば誰でもインストールできます。
+- 📦 **パックを共有。** キャラクター 1 体が小さなパック 1 つ。コマンド 1 つで [dotchi ペットサイト](https://ms1011.github.io/dotchi-packs) に公開するか、zip に書き出せます。
 - 🌏 **セリフは 4 言語。** ペットは韓国語・英語・日本語・中国語（簡体字）で話します。コマンドの案内は英語です。
 - 🐿️🐢 **最初から 2 体:** どんぐりを抱えたリスと、実はとても速いカメ
 
@@ -50,6 +50,7 @@ claude plugin install dotchi --marketplace ms1011/dotchi
 
 - mod に対応した Claude Code（v2.1.306 以降）
 - ふ化と zip パックには Python 3。初めてふ化するときに OpenCV・numpy・Pillow を `~/.claude/dotchi/venv` にインストールします。
+- サイトにペットを公開するには、ログイン済みの [GitHub CLI](https://cli.github.com)（`gh`）
 
 **アップデート**
 
@@ -71,8 +72,10 @@ claude plugin update dotchi
 | `/dotchi list` | 標準とマイキャラの一覧 |
 | `/dotchi hatch [画像のパス]` | 絵から新しいキャラクターをふ化 |
 | `/dotchi edit <キャラクター>` | Claude と一緒に手直し |
-| `/dotchi install <zip またはフォルダー>` | パックをインストール |
+| `/dotchi install <zip、フォルダー、またはサイトの id>` | パック、またはサイトのペットを id かリンクでインストール |
 | `/dotchi export <キャラクター> [--with-source]` | 今のフォルダーに `<id>.dotchi.zip` として保存 |
+| `/dotchi share <キャラクター> [--as <id>]` | dotchi サイトにペットを公開（id が使われていたら `--as` で先に変更） |
+| `/dotchi unshare <キャラクター>` | サイトから自分のペットを取り下げ |
 | `/dotchi remove <キャラクター>` | マイキャラを削除 |
 | `/dotchi show always\|working\|side` | 常に / Claude の作業中のみ / サイドパネル |
 | `/dotchi voice on\|off` | 返答のあとの一言 |
@@ -102,6 +105,18 @@ Claude が一度にひとつずつ質問しながら進めます。
 あとで直すには `/dotchi edit <キャラクター>`。
 
 ## パックを共有する
+
+**dotchi ペットサイトで。** [ms1011.github.io/dotchi-packs](https://ms1011.github.io/dotchi-packs) にみんなが作ったペットが集まっています。ペットごとにインストールコマンドをコピーするボタンがあります。
+
+```
+/dotchi share my-cat               # gh で ms1011/dotchi-packs に Issue を作成
+/dotchi install my-cat             # だれでも id（またはペットのページのリンク）でインストール
+/dotchi unshare my-cat             # 取り下げ
+```
+
+公開には GitHub にログインした `gh` が必要です。Issue でチェックが走り、通れば 1〜2 分でサイトに表示されます。いいねは GitHub 上のそのペットの Issue に付ける 👍 なので GitHub アカウントが必要で、数は 1 時間ごとに反映されます。
+
+**ファイルで。**
 
 ```
 /dotchi export my-cat              # → ./my-cat.dotchi.zip

@@ -24,7 +24,7 @@
 - 🎞️ **진짜 픽셀 애니메이션.** 그림을 통째로 옮기는 게 아니라 팔, 다리, 귀, 꼬리, 바퀴처럼 고른 부분이 움직여요.
 - 💬 **말을 해요.** 만화 말풍선, Claude가 일하는 동안 나오는 스피너 문구, 답변 끝 한마디(선택)가 있어요.
 - 🪟 **입력창 위 또는 옆 패널.** 펫을 오른쪽 패널에 두고 답변은 나머지 화면을 쓰게 할 수 있어요.
-- 📦 **팩 공유.** 캐릭터 하나가 작은 팩 하나예요. zip으로 내보내면 누구나 설치할 수 있어요.
+- 📦 **팩 공유.** 캐릭터 하나가 작은 팩 하나예요. 명령 하나로 [도찌 펫 사이트](https://ms1011.github.io/dotchi-packs)에 올리거나 zip으로 내보낼 수 있어요.
 - 🌏 **대사 4개 언어.** 펫이 한국어, 영어, 일본어, 중국어(간체)로 말해요. 명령 안내 문구는 영어예요.
 - 🐿️🐢 **처음부터 두 마리:** 도토리를 안은 다람쥐, 알고 보니 엄청 빠른 거북이
 
@@ -50,6 +50,7 @@ claude plugin install dotchi --marketplace ms1011/dotchi
 
 - mod를 지원하는 Claude Code (v2.1.306 이상)
 - 부화와 zip 팩에는 Python 3. 처음 부화할 때 OpenCV, numpy, Pillow를 `~/.claude/dotchi/venv`에 설치해요.
+- 사이트에 펫을 올리려면 로그인한 [GitHub CLI](https://cli.github.com)(`gh`)
 
 **업데이트**
 
@@ -71,8 +72,10 @@ claude plugin update dotchi
 | `/dotchi list` | 기본 캐릭터와 내 캐릭터 목록 |
 | `/dotchi hatch [그림 경로]` | 그림으로 새 캐릭터 부화 |
 | `/dotchi edit <캐릭터>` | Claude와 캐릭터 다듬기 |
-| `/dotchi install <zip 또는 폴더>` | 팩 설치 |
+| `/dotchi install <zip, 폴더 또는 사이트 id>` | 팩 설치, 또는 사이트의 펫을 id나 링크로 설치 |
 | `/dotchi export <캐릭터> [--with-source]` | 지금 폴더에 `<id>.dotchi.zip`으로 저장 |
+| `/dotchi share <캐릭터> [--as <id>]` | 도찌 사이트에 펫 올리기 (id가 이미 쓰이면 `--as`로 먼저 바꾸기) |
+| `/dotchi unshare <캐릭터>` | 사이트에서 내 펫 내리기 |
 | `/dotchi remove <캐릭터>` | 내 캐릭터 지우기 |
 | `/dotchi show always\|working\|side` | 항상 / Claude가 일할 때만 / 옆 패널 |
 | `/dotchi voice on\|off` | 답변 끝 한마디 |
@@ -102,6 +105,18 @@ Claude가 한 번에 하나씩 물어보면서 진행해요.
 나중에 고치려면 `/dotchi edit <캐릭터>`.
 
 ## 팩 공유
+
+**도찌 펫 사이트에서.** [ms1011.github.io/dotchi-packs](https://ms1011.github.io/dotchi-packs)에 사람들이 만든 펫이 모여 있어요. 펫마다 설치 명령을 복사하는 버튼이 있어요.
+
+```
+/dotchi share my-cat               # gh로 ms1011/dotchi-packs에 Issue를 열어요
+/dotchi install my-cat             # 누구나 id(또는 펫 페이지 주소)로 설치해요
+/dotchi unshare my-cat             # 내리기
+```
+
+올리려면 GitHub에 로그인한 `gh`가 필요해요. Issue에서 검사가 돌고, 통과하면 1~2분 안에 사이트에 나와요. 좋아요는 GitHub에 있는 그 펫의 Issue에 누르는 👍라서 GitHub 계정이 있어야 하고, 숫자는 한 시간마다 반영돼요.
+
+**파일로.**
 
 ```
 /dotchi export my-cat              # → ./my-cat.dotchi.zip

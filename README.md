@@ -24,7 +24,7 @@ dotchi is a mod for [Claude Code](https://docs.claude.com/en/docs/claude-code). 
 - 🎞️ **Real pixel animation.** Arms, legs, ears, tails, wheels: the parts you choose move, not just the whole picture.
 - 💬 **It talks.** A comic speech bubble, its own spinner lines while Claude works, and an optional one-liner after each answer.
 - 🪟 **Above the prompt or in a side panel.** Keep your pet in a panel on the right while answers use the rest of the screen.
-- 📦 **Share packs.** Every character is a small pack. Export it as a zip and anyone can install it.
+- 📦 **Share packs.** Every character is a small pack. Share it on [the dotchi pets site](https://ms1011.github.io/dotchi-packs) with one command, or export it as a zip.
 - 🌏 **Lines in four languages.** Your pet can talk in Korean, English, Japanese or Simplified Chinese. Command messages are in English.
 - 🐿️🐢 **Two pets to start with:** a squirrel hugging an acorn, and a turtle that turns out to be very fast.
 
@@ -50,6 +50,7 @@ claude plugin install dotchi --marketplace ms1011/dotchi
 
 - Claude Code with mods (v2.1.306 or later)
 - Python 3 for hatching and for zip packs. The first hatch installs OpenCV, numpy and Pillow into `~/.claude/dotchi/venv`.
+- The [GitHub CLI](https://cli.github.com) (`gh`, logged in) to share pets on the site
 
 **Update**
 
@@ -71,8 +72,10 @@ Everything is under `/dotchi`.
 | `/dotchi list` | List built-in characters and yours |
 | `/dotchi hatch [image path]` | Hatch a new character from a picture |
 | `/dotchi edit <character>` | Touch up a character with Claude |
-| `/dotchi install <zip or folder>` | Install a pack |
+| `/dotchi install <zip, folder or site id>` | Install a pack, or a pet from the site by id or link |
 | `/dotchi export <character> [--with-source]` | Save a pack as `<id>.dotchi.zip` in the current folder |
+| `/dotchi share <character> [--as <id>]` | Share a pet on the dotchi site (`--as` renames it first if the id is taken) |
+| `/dotchi unshare <character>` | Take your pet down from the site |
 | `/dotchi remove <character>` | Remove one of your characters |
 | `/dotchi show always\|working\|side` | Show always, only while Claude works, or in a side panel |
 | `/dotchi voice on\|off` | One-liner after each answer |
@@ -102,6 +105,18 @@ Claude walks you through it, one question at a time:
 Change it later with `/dotchi edit <character>`.
 
 ## Share packs
+
+**On the dotchi pets site.** [ms1011.github.io/dotchi-packs](https://ms1011.github.io/dotchi-packs) lists pets people made. Each page has a copy button for its install command.
+
+```
+/dotchi share my-cat               # opens an issue on ms1011/dotchi-packs with gh
+/dotchi install my-cat             # anyone can install it by id (or by its page link)
+/dotchi unshare my-cat             # take it down
+```
+
+Sharing needs `gh` logged in to GitHub. A check runs on the issue and the pet shows up on the site within a minute or two if it passes. Likes are 👍 reactions on the pet's issue on GitHub, so you need a GitHub account to like one; counts update every hour.
+
+**As a file.**
 
 ```
 /dotchi export my-cat              # → ./my-cat.dotchi.zip

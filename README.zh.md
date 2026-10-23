@@ -24,7 +24,7 @@ dotchi 是 [Claude Code](https://docs.claude.com/en/docs/claude-code) 的一个 
 - 🎞️ **真正的像素动画。** 不是整张图移动，而是你选的手臂、腿、耳朵、尾巴、车轮等部位在动。
 - 💬 **会说话。** 漫画气泡、Claude 工作时的加载台词，以及回答后的一句话（可选）。
 - 🪟 **输入框上方或侧边面板。** 可以把宠物放在右侧面板，回答使用其余的屏幕空间。
-- 📦 **分享角色包。** 每个角色就是一个小角色包。导出成 zip，任何人都能安装。
+- 📦 **分享角色包。** 每个角色就是一个小角色包。一条命令就能发布到 [dotchi 宠物网站](https://ms1011.github.io/dotchi-packs)，也可以导出成 zip。
 - 🌏 **台词支持四种语言。** 宠物可以用韩语、英语、日语或简体中文说话。命令提示为英语。
 - 🐿️🐢 **一开始就有两只：** 抱着橡果的松鼠，以及其实跑得飞快的乌龟
 
@@ -50,6 +50,7 @@ claude plugin install dotchi --marketplace ms1011/dotchi
 
 - 支持 mod 的 Claude Code（v2.1.306 或更高）
 - 孵化和 zip 角色包需要 Python 3。第一次孵化时会把 OpenCV、numpy、Pillow 安装到 `~/.claude/dotchi/venv`。
+- 要在网站上分享宠物，需要已登录的 [GitHub CLI](https://cli.github.com)（`gh`）
 
 **更新**
 
@@ -71,8 +72,10 @@ claude plugin update dotchi
 | `/dotchi list` | 内置角色和我的角色列表 |
 | `/dotchi hatch [图片路径]` | 用图片孵化新角色 |
 | `/dotchi edit <角色>` | 和 Claude 一起修改角色 |
-| `/dotchi install <zip 或文件夹>` | 安装角色包 |
+| `/dotchi install <zip、文件夹或网站 id>` | 安装角色包，或按 id 或链接安装网站上的宠物 |
 | `/dotchi export <角色> [--with-source]` | 在当前文件夹保存为 `<id>.dotchi.zip` |
+| `/dotchi share <角色> [--as <id>]` | 把宠物发布到 dotchi 网站（id 被占用时用 `--as` 先改名） |
+| `/dotchi unshare <角色>` | 从网站撤下自己的宠物 |
 | `/dotchi remove <角色>` | 删除我的角色 |
 | `/dotchi show always\|working\|side` | 始终显示 / 仅在 Claude 工作时 / 侧边面板 |
 | `/dotchi voice on\|off` | 回答后的一句话 |
@@ -102,6 +105,18 @@ Claude 会一次问一个问题，带你完成：
 以后要修改：`/dotchi edit <角色>`。
 
 ## 分享角色包
+
+**在 dotchi 宠物网站上。** [ms1011.github.io/dotchi-packs](https://ms1011.github.io/dotchi-packs) 汇集了大家做的宠物。每只宠物都有复制安装命令的按钮。
+
+```
+/dotchi share my-cat               # 用 gh 在 ms1011/dotchi-packs 上创建 Issue
+/dotchi install my-cat             # 任何人都能按 id（或宠物页面链接）安装
+/dotchi unshare my-cat             # 撤下
+```
+
+分享需要已登录 GitHub 的 `gh`。Issue 上会运行检查，通过后一两分钟内就会出现在网站上。点赞就是在 GitHub 上该宠物的 Issue 点 👍，所以需要 GitHub 账号；数字每小时更新一次。
+
+**作为文件。**
 
 ```
 /dotchi export my-cat              # → ./my-cat.dotchi.zip
