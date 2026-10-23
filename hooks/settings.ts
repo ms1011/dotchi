@@ -22,7 +22,7 @@ export type DotchiCommand =
   | { kind: 'show'; mode: ShowMode }
   | { kind: 'voice'; on: boolean }
   | { kind: 'lang'; lang: Lang | null }
-  | { kind: 'install'; path: string }
+  | { kind: 'install'; path: string; raw: string }
   | { kind: 'export'; target: string; withSource: boolean }
   | { kind: 'remove'; target: string }
   | { kind: 'hatch'; image: string | null }
@@ -46,7 +46,7 @@ export const parseDotchi = (args: string, home = ''): DotchiCommand => {
   if (first === 'install') {
     // 경로에는 공백이 있을 수 있어서 하위 명령 뒤 전체를 경로로 본다
     const raw = trimmed.slice('install'.length).trim()
-    return raw === '' ? { kind: 'usage' } : { kind: 'install', path: toPath(raw, home) }
+    return raw === '' ? { kind: 'usage' } : { kind: 'install', path: toPath(raw, home), raw }
   }
   if (first === 'hatch') {
     const raw = trimmed.slice('hatch'.length).trim()

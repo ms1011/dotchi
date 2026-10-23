@@ -3,6 +3,7 @@ import type { EngineInterface } from 'claude-code'
 import type { Character, Lang, Origin, PackMeta } from '../types'
 import { parseArt } from './dots'
 import { findPackRoot, LANGS, parseLines, parseMeta, uniqueId } from './packs'
+import { SITE } from './share'
 
 /** 사용자 데이터 폴더: 플러그인을 업데이트해도 남는다 */
 export async function dataDir($: EngineInterface): Promise<string> {
@@ -152,6 +153,27 @@ export async function installPack($: EngineInterface, path: string, taken: Reado
   } finally {
     if (isZip) await run($, ['rm', '-rf', tmp])
   }
+}
+
+export type RemotePack = { dir: string; tmp: string } | { error: 'notOnSite' | 'unreachable' }
+
+/**
+ * 사이트에서 펫의 세 JSON을 받아 임시 폴더에 쓴다. 지울 폴더(tmp)는 부른 쪽이 지운다.
+ * 하나라도 없으면 notOnSite, 연결이 안 되거나 서버 오류면 unreachable
+ */
+export async function fetchRemotePack($: EngineInterface, id: string): Promise<RemotePack> {
+  const tmp = `${await dataDir($)}/tmp/remote-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
+  const dir = `${tmp}/${id}`
+  const texts: [string, string][] = []
+  for (const name of ['dotchi.json', 'art.json', 'lines.json']) {
+    const response = await $.http.fetch(`${SITE}/packs/${id}/${name}`).catch(() => null)
+    if (response === null || response.status >= 500) return { error: 'unreachable' }
+    if (!response.ok) return { error: 'notOnSite' }
+    texts.push([name, response.text])
+  }
+  if ((await run($, ['mkdir', '-p', dir])).exitCode !== 0) return { error: 'unreachable' }
+  for (const [name, text] of texts) await $.fs.write(`${dir}/${name}`, text)
+  return { dir, tmp }
 }
 
 /** 팩을 <작업 폴더>/<id>.dotchi.zip으로. 원본 그림(source/)은 withSource일 때만 넣는다 */

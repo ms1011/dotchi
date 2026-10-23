@@ -6,10 +6,11 @@ import { cropColumns, encodeFrame, halve, usedColumns } from './dots'
 import { detectLang, LANG_NAMES, t } from './i18n'
 import type { BandLayout } from './layout'
 import { bandLayout, paneLayout } from './layout'
-import { copyToUser, dataDir, exportPack, installPack, loadCharacters, removePack, resolveCharacter } from './library'
+import { copyToUser, dataDir, exportPack, fetchRemotePack, installPack, loadCharacters, removePack, resolveCharacter } from './library'
 import { endingLine, idleLine, spinnerLine } from './lines'
 import { frameMsOf, nameOf, pickLines, ticksPerLine } from './packs'
 import { DEFAULT_SETTINGS, normalizeSettings, parseDotchi } from './settings'
+import { remoteIdOf } from './share'
 
 const settingsAtom = atom({ plugin: 'dotchi', key: 'settings' } as const, DEFAULT_SETTINGS)
 const tickAtom = atom({ plugin: 'dotchi', key: 'tick' } as const, 0)
@@ -181,7 +182,23 @@ export const register: Register = on => {
       }
       case 'install': {
         characters = await loadCharacters($)
-        const result = await installPack($, command.path, new Set(characters.map(ch => ch.meta.id)))
+        const taken = new Set(characters.map(ch => ch.meta.id))
+        // 있는 로컬 경로가 먼저. 없으면 사이트의 펫 id나 주소로 본다
+        const remoteId = (await $.fs.exists(command.path).catch(() => false)) ? null : remoteIdOf(command.raw)
+        let result
+        if (remoteId === null) {
+          result = await installPack($, command.path, taken)
+        } else {
+          const fetched = await fetchRemotePack($, remoteId)
+          if ('error' in fetched) {
+            return { text: t(fetched.error === 'notOnSite' ? 'notOnSite' : 'siteUnreachable', { id: remoteId }) }
+          }
+          try {
+            result = await installPack($, fetched.dir, taken)
+          } finally {
+            await $.process.run(['rm', '-rf', fetched.tmp]).catch(() => undefined)
+          }
+        }
         if ('error' in result) {
           const { error } = result
           const reason = t(`reason.${error.reason}`, {

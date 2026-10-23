@@ -16,7 +16,7 @@ export const MESSAGES = {
   status: 'Now: {name} · Shown: {show} · One-liner after answers: {voice}',
   changed: 'Done. {status}',
   usage:
-    'Usage: /dotchi [character] · list · hatch [image path] · edit <character> · install <zip or folder> · export <character> [--with-source] · remove <character> · show [always|working|side] · voice [on|off] · lang [ko|en|ja|zh|auto]',
+    'Usage: /dotchi [character] · list · hatch [image path] · edit <character> · install <zip, folder or site id> · export <character> [--with-source] · remove <character> · show [always|working|side] · voice [on|off] · lang [ko|en|ja|zh|auto]',
   unknownCharacter: "No character '{arg}'. See /dotchi list",
   listItem: '{mark}{id} ({name}) · {origin}',
   'origin.builtin': 'built-in',
@@ -36,6 +36,8 @@ export const MESSAGES = {
   'reason.noPack': 'no pack folder with dotchi.json found',
   'reason.badPack': 'a pack file is broken ({file})',
   'reason.unzip': "couldn't unzip it. Python 3 is required",
+  notOnSite: "No pet called '{id}' on the dotchi site",
+  siteUnreachable: "Couldn't reach the dotchi site. Check your connection and try again",
   exported: 'Pack created: {path}',
   exportFailed: "Couldn't create the pack. Python 3 is required",
   removed: 'Removed {id}',

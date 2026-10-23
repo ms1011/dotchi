@@ -16,7 +16,7 @@ export type Files = Record<string, string>
 
 const toKey = (files: Files, path: string): string | undefined => {
   if (path.startsWith(DATA)) return `data${path.slice(DATA.length)}`
-  return Object.keys(files).find(k => !k.startsWith('data/') && path.endsWith(`/${k}`))
+  return Object.keys(files).find(k => !k.startsWith('data/') && (path === k || path.endsWith(`/${k}`)))
 }
 
 const dirKey = (files: Files, path: string): string | undefined => {
@@ -28,7 +28,7 @@ const dirKey = (files: Files, path: string): string | undefined => {
     const parts = k.split('/')
     for (let i = 1; i < parts.length; i++) dirs.add(parts.slice(0, i).join('/'))
   }
-  return [...dirs].find(d => trimmed.endsWith(`/${d}`))
+  return [...dirs].find(d => trimmed === d || trimmed.endsWith(`/${d}`))
 }
 
 export const fill = (color: string): Frame => Array.from({ length: 32 }, () => Array.from({ length: 32 }, () => color))
@@ -136,6 +136,8 @@ export const fakeEngine = (
     zips?: Record<string, Files>
     /** 심볼릭 링크로 보일 파일 키 */
     links?: readonly string[]
+    /** 가짜 인터넷: URL → 응답('offline'이면 연결 실패). 없는 URL은 404 */
+    http?: Record<string, { status: number; text: string } | 'offline'>
   } = {},
 ) => {
   const files: Files = { ...(options.files ?? BUILTINS) }
@@ -143,6 +145,7 @@ export const fakeEngine = (
   const reads: string[] = []
   const writes: { path: string; text: string }[] = []
   const runs: string[][] = []
+  const fetched: string[] = []
   const opened: { id: string; columns?: number }[] = []
   const closed: string[] = []
   const stored: Record<string, unknown> = { ...options.store }
@@ -204,6 +207,12 @@ export const fakeEngine = (
     const key = pathKey(files, e.path)
     return { value: Object.keys(files).some(k => k === key || k.startsWith(`${key}/`)) }
   })
+  on('http.fetch', (_, e) => {
+    fetched.push(e.url)
+    const answer = options.http?.[e.url] ?? { status: 404, text: 'Not Found' }
+    if (answer === 'offline') throw new Error(`ENOTFOUND ${e.url}`)
+    return { value: { status: answer.status, ok: answer.status >= 200 && answer.status < 300, headers: {}, text: answer.text } }
+  })
   on('session.cwd', () => ({ value: '/work' }))
   on('ui.toast', (_, e) => {
     toasts.push(JSON.stringify(e))
@@ -217,7 +226,7 @@ export const fakeEngine = (
     closed.push(e.id)
     return { value: undefined }
   })
-  return { files, toasts, reads, writes, runs, clock, stored, opened, closed, env, zipsOut }
+  return { files, toasts, reads, writes, runs, fetched, clock, stored, opened, closed, env, zipsOut }
 }
 
 export const SESSION = { cwd: '/work', surface: 'terminal', isInteractive: true } as const

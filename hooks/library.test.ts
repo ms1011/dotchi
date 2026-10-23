@@ -26,9 +26,9 @@ test('uniqueId', () => {
 })
 
 test('parseDotchi install·export·remove 경로', () => {
-  expect(parseDotchi('install ~/Downloads/a b.zip', HOME)).toEqual({ kind: 'install', path: `${HOME}/Downloads/a b.zip` })
-  expect(parseDotchi('install "~/x y"', HOME)).toEqual({ kind: 'install', path: `${HOME}/x y` })
-  expect(parseDotchi("install '/tmp/p'", HOME)).toEqual({ kind: 'install', path: '/tmp/p' })
+  expect(parseDotchi('install ~/Downloads/a b.zip', HOME)).toEqual({ kind: 'install', path: `${HOME}/Downloads/a b.zip`, raw: '~/Downloads/a b.zip' })
+  expect(parseDotchi('install "~/x y"', HOME)).toEqual({ kind: 'install', path: `${HOME}/x y`, raw: '"~/x y"' })
+  expect(parseDotchi("install '/tmp/p'", HOME)).toEqual({ kind: 'install', path: '/tmp/p', raw: "'/tmp/p'" })
   expect(parseDotchi('install', HOME)).toEqual({ kind: 'usage' })
   expect(parseDotchi('export bunny', HOME)).toEqual({ kind: 'export', target: 'bunny', withSource: false })
   expect(parseDotchi('export bunny --with-source', HOME)).toEqual({ kind: 'export', target: 'bunny', withSource: true })
@@ -121,9 +121,9 @@ test('기본 팩은 못 지우고, 지금 캐릭터를 지우면 다람쥐로', 
 })
 
 test('드래그해서 넣은 경로(역슬래시로 공백 이스케이프)도 읽는다', () => {
-  expect(parseDotchi('install /Users/me/My\\ Packs/x.zip', HOME)).toEqual({ kind: 'install', path: '/Users/me/My Packs/x.zip' })
+  expect(parseDotchi('install /Users/me/My\\ Packs/x.zip', HOME)).toEqual({ kind: 'install', path: '/Users/me/My Packs/x.zip', raw: '/Users/me/My\\ Packs/x.zip' })
   expect(parseDotchi('hatch ~/a\\ b\\(1\\).png', HOME)).toEqual({ kind: 'hatch', image: `${HOME}/a b(1).png` })
-  expect(parseDotchi('install "/x/a\\ b"', HOME)).toEqual({ kind: 'install', path: '/x/a\\ b' })
+  expect(parseDotchi('install "/x/a\\ b"', HOME)).toEqual({ kind: 'install', path: '/x/a\\ b', raw: '"/x/a\\ b"' })
 })
 
 test('설치·내보내기는 정해진 파일만 복사하고 링크는 건너뛴다', async ($, on) => {
