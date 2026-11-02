@@ -22,9 +22,10 @@ import { endingLine, idleLine, spinnerLine } from './lines'
 import { frameMsOf, isId, nameOf, pickLines, ticksPerLine } from './packs'
 import type { LimitAlert, LimitSeen } from './limits'
 import { limitAlert } from './limits'
+import { shouldWarnRest } from './rest'
 import { DEFAULT_SETTINGS, normalizeSettings, parseDotchi } from './settings'
 import type { TalkKey } from './talk'
-import { duration, say, when } from './talk'
+import { duration, say, tokens, when } from './talk'
 import { PACKS_REPO, petPage, remoteIdOf, shareBody, SITE, suggestId, takenOf, unshareBody } from './share'
 
 const settingsAtom = atom({ plugin: 'dotchi', key: 'settings' } as const, DEFAULT_SETTINGS)
@@ -49,6 +50,12 @@ async function showAlert($: EngineInterface, text: string): Promise<void> {
   const until = (await $.clock.now()) + ALERT_MS
   await update($, alertAtom, () => ({ text, until }))
   $.clock.after(ALERT_MS, () => void update($, alertAtom, a => (a !== null && a.until <= until ? null : a)))
+}
+
+/** 이 세션의 마지막 턴 시각 (저장된 것). 없으면 null */
+async function loadLastTurn($: EngineInterface): Promise<number | null> {
+  const saved = await $.store.get(`lastTurnAt:${await $.session.id()}`)
+  return typeof saved === 'number' && Number.isFinite(saved) ? saved : null
 }
 
 /**
@@ -164,6 +171,10 @@ export const register: Register = on => {
   let lastNotify: UiNotifyResult | null = null
   /** '알림이 안 가고 있어요'는 세션마다 한 번만 */
   let hintedNoChannel = false
+  /** 이 세션의 마지막 (메인) 턴이 끝난 시각. 다시 연 세션은 저장된 값 */
+  let lastTurnAt: number | null = null
+  /** 쉬고 돌아왔을 때 경고는 쉴 때마다 한 번만 */
+  let restWarned = false
 
   /** 컴퓨터 언어 (세션 시작 때 읽는다). 설정의 lang이 있으면 그쪽이 먼저 */
   let systemLang: Lang = 'en'
@@ -206,6 +217,8 @@ export const register: Register = on => {
 
   on('session.start', async ($, e, next) => {
     hintedNoChannel = false
+    restWarned = false
+    lastTurnAt = await loadLastTurn($)
     await $.command.register({ name: 'dotchi', description: 'Your pixel pet: switch, hatch, install, show' })
     const saved = await loadSettings($)
     systemLang = detectLang({
@@ -223,6 +236,8 @@ export const register: Register = on => {
   // /clear, /resume, /branch는 세션 상태를 기본값으로 되돌린다 (session.start는 다시 오지 않는다):
   // 저장된 설정을 다시 읽고, 옆 패널 모드였으면 패널 상태도 되살린다
   on('classic.SessionStart', { source: ['clear', 'resume', 'fork'] }, async ($, e, next) => {
+    restWarned = false
+    lastTurnAt = await loadLastTurn($)
     const saved = await loadSettings($)
     lang = () => langOf(saved)
     characters = await loadCharacters($)
@@ -474,6 +489,24 @@ export const register: Register = on => {
     return result
   })
 
+  // 오래 쉬고 큰 대화를 이어가려 할 때: 입력을 시작하는 순간 한 번 말한다 (막지 않는다)
+  on('prompt.edit', async ($, e, next) => {
+    if (!restWarned && lastTurnAt !== null) {
+      const settings = normalizeSettings(await read($, settingsAtom))
+      const now = await $.clock.now()
+      // 시간 조건을 먼저 본다: 타이핑마다 사용량을 묻지 않게
+      if (shouldWarnRest(lastTurnAt, now, Number.MAX_SAFE_INTEGER, settings.rest)) {
+        restWarned = true
+        const used = (await $.session.usage().catch(() => null))?.context.tokens
+        if (shouldWarnRest(lastTurnAt, now, used, settings.rest)) {
+          lang = () => langOf(settings)
+          await showAlert($, talk('rest', { tokens: tokens(used!) }))
+        }
+      }
+    }
+    return next(e)
+  })
+
   // 메시지를 보내면 경고 말풍선은 할 일을 다 했다
   on('prompt.submit', async ($, e, next) => {
     await update($, alertAtom, () => null)
@@ -500,6 +533,9 @@ export const register: Register = on => {
 
   on('turn.complete', async ($, e, next) => {
     if (e.agentId !== undefined) return next(e)
+    lastTurnAt = await $.clock.now()
+    restWarned = false
+    await $.store.set(`lastTurnAt:${await $.session.id()}`, lastTurnAt)
     timer?.cancel()
     timer = null
     await update($, tickAtom, () => 0)
