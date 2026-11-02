@@ -20,7 +20,7 @@ test('80%를 넘으면 80 단계', () => {
   expect(alert?.step).toBe(80)
   expect(alert?.percent).toBe(80)
   expect(alert?.resetsAt).toBe(resetMs)
-  expect(seen.seven_day).toEqual({ resetsAt: RESET, step: 80 })
+  expect(seen.seven_day).toEqual({ resetsAt: RESET, step: 80, percent: 80 })
 })
 
 test('같은 단계 안의 변화는 알리지 않는다', () => {
@@ -71,4 +71,25 @@ test('리셋 전에 바닥나지 않을 속도면 예상을 뺀다', () => {
   // 6.5일 만에 90%: 바닥은 7.2일째, 리셋 뒤
   const { alert } = limitAlert([week(90)], {}, resetMs - DAY / 2)
   expect(alert?.emptyAt).toBe(null)
+})
+
+test('resetsAt이 계속 없어도 사용률이 떨어지면 새 주기로 센다', () => {
+  const first = limitAlert([week(95, null)], {}, NOW)
+  expect(first.alert?.step).toBe(95)
+  expect(limitAlert([week(96, null)], first.seen, NOW).alert).toBe(null)
+  expect(limitAlert([week(81, null)], first.seen, NOW + 7 * DAY).alert?.step).toBe(80)
+})
+
+test('같은 시각을 다르게 적어도, 있다 없다 해도 리셋이 아니다', () => {
+  const first = limitAlert([week(85)], {}, NOW)
+  expect(limitAlert([week(86, '2026-11-09T00:00:00Z')], first.seen, NOW).alert).toBe(null)
+  const gone = limitAlert([week(86, null)], first.seen, NOW)
+  expect(gone.alert).toBe(null)
+  expect(limitAlert([week(87)], gone.seen, NOW).alert).toBe(null)
+})
+
+test('resetsAt이 몇 시간 이상 뒤로 밀리면 리셋', () => {
+  const first = limitAlert([week(95)], {}, NOW)
+  const next = limitAlert([week(81, '2026-11-16T00:00:00.000Z')], first.seen, NOW)
+  expect(next.alert?.step).toBe(80)
 })

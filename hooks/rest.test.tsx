@@ -17,7 +17,7 @@ test('shouldWarnRest 경계', () => {
   expect(shouldWarnRest(0, 100 * HOUR, 150000, null)).toBe(false)
 })
 
-const setup = (on: On, contextTokens: number) => {
+const setup = (on: On, contextTokens: number | undefined) => {
   const engine = fakeEngine(on, {
     files: BUILTINS,
     store: { settings: { character: 'squirrel', show: 'working', voice: false, lang: 'ko' } },
@@ -115,5 +115,17 @@ test('마지막 턴 시각은 저장되어 다시 연 세션에서도 쓴다', a
   stored['lastTurnAt:test-session'] = 0
   await $.session.start(SESSION)
   await type($, 'h')
+  expect(await bubble($)).toMatch(/오랜만이에요/)
+})
+
+test('다시 연 직후 토큰 수를 아직 모르면 알 수 있을 때 다시 확인한다', async ($, on) => {
+  const { clock, usage } = setup(on, undefined)
+  await $.session.start(SESSION)
+  await $.turn.complete(answer)
+  await clock.advance(30 * HOUR)
+  await type($, 'h')
+  expect(await bubble($)).toBe(undefined)
+  usage.contextTokens = 150000
+  await type($, 'hi')
   expect(await bubble($)).toMatch(/오랜만이에요/)
 })

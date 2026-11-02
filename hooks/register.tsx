@@ -21,7 +21,7 @@ import {
 import { endingLine, idleLine, spinnerLine } from './lines'
 import { frameMsOf, isId, nameOf, pickLines, ticksPerLine } from './packs'
 import { parseStatus } from './gitstat'
-import { addArtifact, gitLines, parseArtifacts, summaryOf } from './info'
+import { addArtifact, artifactOf, gitLines, parseArtifacts, summaryOf } from './info'
 import type { LimitAlert, LimitSeen } from './limits'
 import { limitAlert } from './limits'
 import { shouldWarnRest } from './rest'
@@ -63,30 +63,38 @@ async function showAlert($: EngineInterface, text: string): Promise<void> {
 const GIT_EVERY_MS = 30000
 /** 파일을 바꿀 수 있는 도구: 끝나면 git을 다시 읽는다 */
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'NotebookEdit'])
-/** git을 읽는 중이면 또 읽지 않는다 (몰리면 한 번으로) */
+/** git을 읽는 중이면 또 읽지 않고, 끝난 뒤 한 번 더 읽는다 (몰리면 한 번으로, 오래된 목록을 남기지 않게) */
 let gitBusy = false
+let gitDirty = false
 /** 저장소 뿌리 (Claude가 고친 파일의 경로를 git 경로로 바꿀 때) */
 let repoRoot: string | null = null
 
 /** git 상태를 다시 읽고 상태 줄을 맞춘다. 저장소가 아니거나 git이 없으면 git 영역을 숨긴다 */
 async function refreshGit($: EngineInterface, lang: Lang): Promise<void> {
-  if (gitBusy) return
+  if (gitBusy) {
+    gitDirty = true
+    return
+  }
   gitBusy = true
   try {
-    const cwd = await $.session.cwd()
-    const run = (args: string[]) =>
-      $.process.run(['git', '-c', 'core.quotePath=false', ...args], { cwd, timeoutMs: 5000 }).catch(() => null)
-    const status = await run(['status', '--porcelain=v2', '--branch'])
-    if (status === null || status.exitCode !== 0) {
-      repoRoot = null
-      await update($, gitAtom, () => null)
-    } else {
-      if (repoRoot === null) {
-        const top = await run(['rev-parse', '--show-toplevel'])
-        repoRoot = top !== null && top.exitCode === 0 ? top.stdout.trim() : cwd
+    do {
+      gitDirty = false
+      const cwd = await $.session.cwd()
+      // --no-optional-locks: 상태를 읽다가 index.lock을 잡아 Claude의 git 명령(commit 등)을 막지 않게
+      const run = (args: string[]) =>
+        $.process.run(['git', '--no-optional-locks', '-c', 'core.quotePath=false', ...args], { cwd, timeoutMs: 5000 }).catch(() => null)
+      const status = await run(['status', '--porcelain=v2', '--branch'])
+      if (status === null || status.exitCode !== 0) {
+        repoRoot = null
+        await update($, gitAtom, () => null)
+      } else {
+        if (repoRoot === null) {
+          const top = await run(['rev-parse', '--show-toplevel'])
+          repoRoot = top !== null && top.exitCode === 0 ? top.stdout.trim() : cwd
+        }
+        await update($, gitAtom, () => parseStatus(status.stdout))
       }
-      await update($, gitAtom, () => parseStatus(status.stdout))
-    }
+    } while (gitDirty)
   } finally {
     gitBusy = false
   }
@@ -228,6 +236,8 @@ export const register: Register = on => {
   let hintedNoChannel = false
   /** 이 세션의 마지막 (메인) 턴이 끝난 시각. 다시 연 세션은 저장된 값 */
   let lastTurnAt: number | null = null
+  /** 한도 측정을 한 번에 하나씩 처리하는 줄 */
+  let measureLock: Promise<void> = Promise.resolve()
   /** 쉬고 돌아왔을 때 경고는 쉴 때마다 한 번만 */
   let restWarned = false
 
@@ -559,17 +569,22 @@ export const register: Register = on => {
   on('session.measure', async ($, e, next) => {
     const result = await next(e)
     if (!e.changed.includes('rateLimits')) return result
-    const settings = normalizeSettings(await read($, settingsAtom))
-    if (!settings.limit) return result
-    lang = () => langOf(settings)
-    const stored = await $.store.get('limitSeen')
-    const seen = (typeof stored === 'object' && stored !== null ? stored : {}) as LimitSeen
-    const { alert, seen: next2 } = limitAlert(e.rateLimits, seen, await $.clock.now())
-    if (alert === null) return result
-    await $.store.set('limitSeen', next2)
-    const text = limitText(alert)
-    await showAlert($, text)
-    await $.ui.notify(text, { title: nameFor(currentOf(settings)) }).catch(() => undefined)
+    // 측정이 겹쳐 와도(서브에이전트 여럿) 읽고-계산하고-쓰는 사이에 끼어들지 못하게 줄을 세운다
+    const turn = measureLock.then(async () => {
+      const settings = normalizeSettings(await read($, settingsAtom))
+      if (!settings.limit) return
+      lang = () => langOf(settings)
+      const stored = await $.store.get('limitSeen')
+      const seen = (typeof stored === 'object' && stored !== null ? stored : {}) as LimitSeen
+      const { alert, seen: next2 } = limitAlert(e.rateLimits, seen, await $.clock.now())
+      await $.store.set('limitSeen', next2)
+      if (alert === null) return
+      const text = limitText(alert)
+      await showAlert($, text)
+      await $.ui.notify(text, { title: nameFor(currentOf(settings)) }).catch(() => undefined)
+    })
+    measureLock = turn.catch(() => undefined)
+    await turn
     return result
   })
 
@@ -580,11 +595,14 @@ export const register: Register = on => {
       const now = await $.clock.now()
       // 시간 조건을 먼저 본다: 타이핑마다 사용량을 묻지 않게
       if (shouldWarnRest(lastTurnAt, now, Number.MAX_SAFE_INTEGER, settings.rest)) {
-        restWarned = true
         const used = (await $.session.usage().catch(() => null))?.context.tokens
-        if (shouldWarnRest(lastTurnAt, now, used, settings.rest)) {
-          lang = () => langOf(settings)
-          await showAlert($, talk('rest', { tokens: tokens(used!) }))
+        // 다시 연 직후에는 토큰 수를 아직 모를 수 있다: 알게 될 때까지 다음 타이핑에서 다시 본다
+        if (used !== undefined) {
+          restWarned = true
+          if (shouldWarnRest(lastTurnAt, now, used, settings.rest)) {
+            lang = () => langOf(settings)
+            await showAlert($, talk('rest', { tokens: tokens(used) }))
+          }
         }
       }
     }
@@ -595,7 +613,7 @@ export const register: Register = on => {
   // 아티팩트를 올리거나 열면 목록에 넣는다
   on('tool.call', async ($, e, next) => {
     const ran = await next(e)
-    if (ran.deny !== undefined || ran.isError === true || e.agentId !== undefined) return ran
+    if (ran.deny !== undefined || ran.isError === true) return ran
     if (EDIT_TOOLS.has(e.tool)) {
       const input = e as { file_path?: unknown; notebook_path?: unknown }
       const path = typeof input.file_path === 'string' ? input.file_path : input.notebook_path
@@ -607,12 +625,12 @@ export const register: Register = on => {
     if (EDIT_TOOLS.has(e.tool) || e.tool === 'Bash') void refreshGit($, lang()).catch(() => undefined)
     if (e.tool === 'Artifact') {
       const input = e as { action?: unknown; asset?: unknown; file_path?: unknown }
-      const result = ran.result as { url?: unknown; title?: unknown } | undefined
       const isPage = input.action === undefined || input.action === 'publish' || input.action === 'open'
-      if (isPage && input.asset !== true && typeof result?.url === 'string') {
-        const file = typeof input.file_path === 'string' ? input.file_path.split('/').pop() : undefined
-        const title = typeof result.title === 'string' && result.title !== '' ? result.title : file ?? result.url
-        const list = addArtifact(await read($, artifactsAtom), { url: result.url, title })
+      const link = isPage && input.asset !== true
+        ? artifactOf(ran.result, ran.text, typeof input.file_path === 'string' ? input.file_path : undefined)
+        : null
+      if (link !== null) {
+        const list = addArtifact(await read($, artifactsAtom), link)
         await update($, artifactsAtom, () => list)
         await $.store.set(`artifacts:${await $.session.id()}`, list)
         await syncStatus($, lang())

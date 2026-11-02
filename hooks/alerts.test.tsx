@@ -116,3 +116,11 @@ test('rateLimits가 바뀌지 않은 측정은 무시한다', async ($, on) => {
   await $.session.measure({ ...measure(90), changed: ['context'] })
   expect(notified.length).toBe(0)
 })
+
+test('측정이 동시에 몰려도 같은 단계는 한 번만 알린다', async ($, on) => {
+  const { clock, notified } = setup(on)
+  await clock.set(NOW)
+  await $.session.start(SESSION)
+  await Promise.all([$.session.measure(measure(85)), $.session.measure(measure(86))])
+  expect(notified.length).toBe(1)
+})

@@ -17,7 +17,7 @@ const pane = {
 
 /** git 흉내: status는 out, rev-parse는 저장소 뿌리. repo가 false면 저장소가 아니다 */
 const setup = (on: On, options: { out?: string; repo?: boolean; show?: string } = {}) => {
-  const git = { out: options.out ?? STATUS, calls: 0 }
+  const git = { out: options.out ?? STATUS, calls: 0, argv: [] as string[] }
   const engine = fakeEngine(on, {
     files: BUILTINS,
     store: { settings: { character: 'squirrel', show: options.show ?? 'side', voice: false, lang: 'ko' } },
@@ -26,6 +26,7 @@ const setup = (on: On, options: { out?: string; repo?: boolean; show?: string } 
       if (options.repo === false) return { exitCode: 128, stderr: 'fatal: not a git repository' }
       if (argv.includes('rev-parse')) return { exitCode: 0, stdout: '/work\n' }
       git.calls++
+      git.argv = [...argv]
       return { exitCode: 0, stdout: git.out }
     },
   })
@@ -39,6 +40,9 @@ const setup = (on: On, options: { out?: string; repo?: boolean; show?: string } 
     if (e.tool === 'Artifact') {
       const action = (e as { action?: string }).action
       if (action === 'list') return { result: { artifacts: [] } as never }
+      if ((e as { mock?: string }).mock === 'text') {
+        return { result: 'Published: https://claude.ai/code/artifact/from-text (private)' as never }
+      }
       return { result: { url: 'https://claude.ai/code/artifact/abc', path: 'page.html', title: '조사 보고서' } as never }
     }
     return { result: {} as never }
@@ -123,4 +127,45 @@ test('30초마다 git을 다시 읽는다', async ($, on) => {
   await clock.advance(30000)
   expect(git.calls).toBeGreaterThan(before)
   expect((await texts($)).all).toContain('M hooks/a.ts')
+})
+
+test('git은 index.lock을 잡지 않게 --no-optional-locks로 읽는다', async ($, on) => {
+  const { clock, git } = setup(on)
+  await $.session.start(SESSION)
+  await clock.settle()
+  expect(git.argv).toContain('--no-optional-locks')
+})
+
+test('읽는 중에 파일이 바뀌면 끝난 뒤 한 번 더 읽는다', async ($, on) => {
+  const { clock, git } = setup(on)
+  await $.session.start(SESSION)
+  await clock.settle()
+  const before = git.calls
+  await Promise.all([
+    $.tool.call({ tool: 'Edit', file_path: '/work/a.ts', old_string: 'a', new_string: 'b' } as never),
+    $.tool.call({ tool: 'Edit', file_path: '/work/b.ts', old_string: 'a', new_string: 'b' } as never),
+  ])
+  await clock.settle()
+  expect(git.calls).toBeGreaterThanOrEqual(before + 2)
+})
+
+test('서브에이전트가 고친 파일에도 표시가 붙고 아티팩트도 담긴다', async ($, on) => {
+  const { clock } = setup(on, { out: DIRTY })
+  await $.session.start(SESSION)
+  await clock.settle()
+  await $.tool.call({ tool: 'Edit', file_path: '/work/z.ts', old_string: 'a', new_string: 'b', agentId: 'a1' } as never)
+  await $.tool.call({ tool: 'Artifact', file_path: '/work/page.html', agentId: 'a1' } as never)
+  await clock.settle()
+  const { all, links } = await texts($)
+  expect(all).toContain('M ✎ z.ts')
+  expect(links.length).toBe(1)
+})
+
+test('결과가 글로만 와도 아티팩트 주소를 찾아 담는다', async ($, on) => {
+  const { clock } = setup(on)
+  await $.session.start(SESSION)
+  await clock.settle()
+  await $.tool.call({ tool: 'Artifact', file_path: '/work/보고서.html', mock: 'text' } as never)
+  const { links } = await texts($)
+  expect(links).toEqual([{ href: 'https://claude.ai/code/artifact/from-text', label: '보고서.html' }])
 })

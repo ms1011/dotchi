@@ -12,7 +12,11 @@ const IGNORED = new Set(['five_hour'])
 const WEEK = 7 * 86400000
 
 /** 창마다 이번 리셋 주기에 마지막으로 알린 단계 */
-export type LimitSeen = Record<string, { resetsAt: string | null; step: number }>
+export type LimitSeen = Record<string, { resetsAt: string | null; step: number; percent?: number }>
+
+const HOUR = 3600000
+/** 사용률이 이만큼 이상 떨어지면 새 주기로 본다 (한도는 리셋 말고는 줄지 않는다) */
+const DROP = 5
 
 export type LimitAlert = {
   kind: string
@@ -41,6 +45,18 @@ const forecast = (kind: string, percent: number, resetsAt: number | null, now: n
 }
 
 /**
+ * 한도가 리셋됐는지. 글자가 달라졌다고 리셋은 아니다: 같은 시각을 다르게 적거나
+ * resetsAt이 있다 없다 하는 것은 리셋이 아니다. 리셋 시각이 몇 시간 이상 뒤로 밀렸거나
+ * (resetsAt을 모를 때를 위해) 사용률이 크게 떨어졌을 때만
+ */
+const isReset = (before: { resetsAt: string | null; percent?: number }, now: SessionRateLimit): boolean => {
+  const was = parseTime(before.resetsAt ?? undefined)
+  const next = parseTime(now.resetsAt)
+  if (was !== null && next !== null && next - was >= HOUR) return true
+  return before.percent !== undefined && now.percentUsed <= before.percent - DROP
+}
+
+/**
  * 새로 넘은 단계가 있으면 알림 하나(여러 창이면 가장 높은 단계)와 갱신된 기록.
  * 같은 리셋 주기 안에서는 단계마다 한 번만 알린다
  */
@@ -53,19 +69,20 @@ export const limitAlert = (
   let alert: LimitAlert | null = null
   for (const window of windows) {
     if (IGNORED.has(window.kind)) continue
-    const resetsAt = window.resetsAt ?? null
     const before = seen[window.kind]
-    const last = before !== undefined && before.resetsAt === resetsAt ? before.step : 0
+    const fresh = before === undefined || isReset(before, window)
+    const last = fresh ? 0 : before.step
     const step = [...LIMIT_STEPS].reverse().find(s => window.percentUsed >= s) ?? 0
-    if (step === 0 && before?.resetsAt !== resetsAt) {
-      // 리셋된 뒤 아직 80% 전: 기록만 새 주기로
-      if (before !== undefined) next[window.kind] = { resetsAt, step: 0 }
+    // 리셋 시각은 알게 된 것을 지킨다: 잠깐 빠졌다고 지우지 않는다
+    const resetsAt = window.resetsAt ?? (fresh ? null : before.resetsAt)
+    const kept = fresh ? 0 : last
+    if (step <= last) {
+      next[window.kind] = { resetsAt, step: kept, percent: window.percentUsed }
       continue
     }
-    if (step <= last) continue
-    next[window.kind] = { resetsAt, step }
+    next[window.kind] = { resetsAt, step, percent: window.percentUsed }
     if (alert === null || step > alert.step) {
-      const reset = parseTime(window.resetsAt)
+      const reset = parseTime(resetsAt ?? undefined)
       alert = {
         kind: window.kind,
         step,
