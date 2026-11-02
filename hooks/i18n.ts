@@ -51,6 +51,8 @@ export const MESSAGES = {
   bundleFailed: "couldn't bundle the pack. Python 3 is required",
   shared: 'Sent {name} ({id}) to the dotchi site. The check posts its result there in a minute: {issue}\nPage: {page}',
   unshareRequested: 'Asked to take down {id}. The result will be posted here: {issue}',
+  notifyFixed: 'Notifications now use {channel} (was {old})',
+  notifyFixManual: "Couldn't change it here. Open /config and set Notifications to \"iTerm2 w/ Bell\"",
   cannotRemoveBuiltin: "{id} is built in and can't be removed",
 }
 

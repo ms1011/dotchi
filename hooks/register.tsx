@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register, Timer } from 'claude-code'
+import type { EngineInterface, Register, Timer, UiNotifyResult } from 'claude-code'
 
 import type { Art, Character, Lang, LineSet, Settings } from '../types'
 import { cropColumns, encodeFrame, halve, usedColumns } from './dots'
@@ -24,7 +24,7 @@ import type { LimitAlert, LimitSeen } from './limits'
 import { limitAlert } from './limits'
 import { DEFAULT_SETTINGS, normalizeSettings, parseDotchi } from './settings'
 import type { TalkKey } from './talk'
-import { say, when } from './talk'
+import { duration, say, when } from './talk'
 import { PACKS_REPO, petPage, remoteIdOf, shareBody, SITE, suggestId, takenOf, unshareBody } from './share'
 
 const settingsAtom = atom({ plugin: 'dotchi', key: 'settings' } as const, DEFAULT_SETTINGS)
@@ -32,6 +32,9 @@ const tickAtom = atom({ plugin: 'dotchi', key: 'tick' } as const, 0)
 const workingAtom = atom({ plugin: 'dotchi', key: 'working' } as const, false)
 const paneAtom = atom({ plugin: 'dotchi', key: 'paneShown' } as const, false)
 const alertAtom = atom({ plugin: 'dotchi', key: 'alert' } as const, null as { text: string; until: number } | null)
+
+/** /dotchi notify fix가 고르는 알림 경로 */
+const NOTIFY_CHANNEL = 'iterm2_with_bell'
 
 /** 경고 말풍선이 떠 있는 시간 */
 const ALERT_MS = 10000
@@ -46,6 +49,17 @@ async function showAlert($: EngineInterface, text: string): Promise<void> {
   const until = (await $.clock.now()) + ALERT_MS
   await update($, alertAtom, () => ({ text, until }))
   $.clock.after(ALERT_MS, () => void update($, alertAtom, a => (a !== null && a.until <= until ? null : a)))
+}
+
+/**
+ * 긴 작업이 끝났다: 데스크톱 알림 + 말풍선.
+ * 알림이 갈 길이 없으면(no-channel) 말풍선으로 고치는 법(hint)을 대신 말한다
+ */
+async function notifyDone($: EngineInterface, title: string, text: string, hint: string | null): Promise<UiNotifyResult | null> {
+  const sent = await $.ui.notify(text, { title }).catch(() => null)
+  const noChannel = sent?.isSent === false && sent.reason === 'no-channel'
+  await showAlert($, noChannel && hint !== null ? hint : text)
+  return sent
 }
 
 /** 지금 떠 있는 경고 말풍선의 글. 없으면 null */
@@ -146,6 +160,10 @@ export const register: Register = on => {
   /** 턴마다 문구 시작점을 바꾼다 */
   let offset = 0
   let timer: Timer | null = null
+  /** 도찌가 보낸 마지막 알림의 결과 (/dotchi에 알림 경로를 보여 줄 때) */
+  let lastNotify: UiNotifyResult | null = null
+  /** '알림이 안 가고 있어요'는 세션마다 한 번만 */
+  let hintedNoChannel = false
 
   /** 컴퓨터 언어 (세션 시작 때 읽는다). 설정의 lang이 있으면 그쪽이 먼저 */
   let systemLang: Lang = 'en'
@@ -187,6 +205,7 @@ export const register: Register = on => {
   }
 
   on('session.start', async ($, e, next) => {
+    hintedNoChannel = false
     await $.command.register({ name: 'dotchi', description: 'Your pixel pet: switch, hatch, install, show' })
     const saved = await loadSettings($)
     systemLang = detectLang({
@@ -266,8 +285,14 @@ export const register: Register = on => {
         await saveSettings($, settings)
         return { text: changed(settings) }
       }
-      case 'notifyFix':
-        return { text: t('usage') }
+      case 'notifyFix': {
+        // 사용자가 Termius에서 확인한 경로: OSC 9 알림 + 벨
+        const rows = await $.config.list().catch(() => [])
+        const row = rows.find(r => /notif/i.test(r.key) && typeof r.value === 'string')
+        const done = row === undefined ? null : await $.config.set({ key: row.key, value: NOTIFY_CHANNEL }).catch(() => null)
+        if (row === undefined || done === null || 'deny' in done) return { text: t('notifyFixManual') }
+        return { text: t('notifyFixed', { channel: NOTIFY_CHANNEL, old: String(row.value) }) }
+      }
       case 'install': {
         characters = await loadCharacters($)
         // 있는 로컬 경로가 먼저. 없으면 사이트의 펫 id나 주소로 본다
@@ -421,6 +446,16 @@ export const register: Register = on => {
     }
   })
 
+  // 승인 대기: 엔진이 직접 알림을 보낸다. 겹치지 않게 도찌는 말풍선만
+  on('classic.Notification', async ($, e, next) => {
+    if (e.notification_type === 'permission_prompt') {
+      const settings = normalizeSettings(await read($, settingsAtom))
+      lang = () => langOf(settings)
+      await showAlert($, talk('permission'))
+    }
+    return next(e)
+  })
+
   // 주간 한도: 80/85/90/95/99%를 넘을 때 한 번씩 (5시간 창은 무시)
   on('session.measure', async ($, e, next) => {
     const result = await next(e)
@@ -473,6 +508,12 @@ export const register: Register = on => {
     const result = await next(e)
     const settings = normalizeSettings(await read($, settingsAtom))
     lang = () => langOf(settings)
+    if (settings.notify && e.reason === 'answer' && e.durationMs >= settings.notifyAfterSec * 1000) {
+      const text = talk('done', { duration: duration(lang(), e.durationMs) })
+      const hint = hintedNoChannel ? null : talk('noChannel')
+      lastNotify = await notifyDone($, nameFor(currentOf(settings)), text, hint)
+      if (lastNotify?.isSent === false && lastNotify.reason === 'no-channel') hintedNoChannel = true
+    }
     if (!settings.voice || e.reason !== 'answer' || e.answer.trim() === '') return result
     const sound = endingLine(linesFor(currentOf(settings)), Math.random())
     return sound === null ? result : { ...result, text: sound }
