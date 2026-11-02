@@ -1,13 +1,5 @@
 /** git status --porcelain=v2 --branch 를 패널에 그릴 모양으로 */
-
-export type GitCode = 'M' | 'A' | 'D' | 'R' | '?'
-export type GitFile = { code: GitCode; path: string }
-export type GitState = {
-  branch: string
-  /** push하지 않은 커밋 수. upstream이 없으면 null */
-  ahead: number | null
-  files: GitFile[]
-}
+import type { GitCode, GitFile, GitState } from '../types'
 
 /** 바뀐 파일 한 줄의 상태 표시: XY 중 삭제·추가가 먼저 보이게 */
 const codeOf = (xy: string): GitCode => (xy.includes('D') ? 'D' : xy.includes('A') ? 'A' : 'M')
