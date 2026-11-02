@@ -16,7 +16,7 @@ export const MESSAGES = {
   status: 'Now: {name} · Shown: {show} · One-liner after answers: {voice}',
   changed: 'Done. {status}',
   usage:
-    'Usage: /dotchi [character] · list · hatch [image path] · edit <character> · install <zip, folder or site id> · export <character> [--with-source] · share <character> [--as <id>] · unshare <character> · remove <character> · show [always|working|side] · voice [on|off] · lang [ko|en|ja|zh|auto]',
+    'Usage: /dotchi [character] · list · hatch [image path] · edit <character> · install <zip, folder or site id> · export <character> [--with-source] · share <character> [--as <id>] · unshare <character> · remove <character> · show [always|working|side] · voice [on|off] · lang [ko|en|ja|zh|auto] · limit [on|off] · notify [on|off|fix|after <seconds>] · rest [<hours> <tokens>|off]',
   unknownCharacter: "No character '{arg}'. See /dotchi list",
   listItem: '{mark}{id} ({name}) · {origin}',
   'origin.builtin': 'built-in',
@@ -51,6 +51,8 @@ export const MESSAGES = {
   bundleFailed: "couldn't bundle the pack. Python 3 is required",
   shared: 'Sent {name} ({id}) to the dotchi site. The check posts its result there in a minute: {issue}\nPage: {page}',
   unshareRequested: 'Asked to take down {id}. The result will be posted here: {issue}',
+  notifyFixed: 'Notifications now use {channel} (was {old})',
+  notifyFixManual: "Couldn't change it here. Open /config and set Notifications to \"iTerm2 w/ Bell\"",
   cannotRemoveBuiltin: "{id} is built in and can't be removed",
 }
 

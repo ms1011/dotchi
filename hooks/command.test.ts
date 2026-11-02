@@ -5,7 +5,7 @@ import { artJson, BUILTINS, dotchi, fakeEngine, lineSet, packFiles, SESSION } fr
 test('처음에는 다람쥐, 일할 때만, 한마디 꺼짐', async ($, on) => {
   fakeEngine(on)
   await $.session.start(SESSION)
-  expect((await dotchi($, '')).text).toBe('Now: 다람쥐 · Shown: while working · One-liner after answers: off')
+  expect((await dotchi($, '')).text?.split('\n')[0]).toBe('Now: 다람쥐 · Shown: while working · One-liner after answers: off')
 })
 
 test('/dotchi <id 또는 이름>으로 바꾸고 다음 세션에도 유지', async ($, on) => {
@@ -51,7 +51,7 @@ test('깨진 팩은 건너뛴다', async ($, on) => {
 test('저장된 캐릭터가 없으면 다람쥐', async ($, on) => {
   fakeEngine(on, { store: { settings: { character: 'bunny', show: 'always', voice: true, lang: null } } })
   await $.session.start(SESSION)
-  expect((await dotchi($, '')).text).toBe('Now: 다람쥐 · Shown: always · One-liner after answers: on')
+  expect((await dotchi($, '')).text?.split('\n')[0]).toBe('Now: 다람쥐 · Shown: always · One-liner after answers: on')
 })
 
 test('사용자 팩 폴더가 없어도 기본 팩으로 동작', async ($, on) => {
@@ -66,7 +66,7 @@ test('/clear 뒤에도 저장된 설정을 다시 읽는다 (Claude Code가 세�
   await $.session.start(SESSION)
   engine.stored.settings = { character: 'turtle', show: 'always', voice: true, lang: null }
   await $.classic.SessionStart({ source: 'clear' })
-  expect((await dotchi($, '')).text).toBe('Now: 거북이 · Shown: always · One-liner after answers: on')
+  expect((await dotchi($, '')).text?.split('\n')[0]).toBe('Now: 거북이 · Shown: always · One-liner after answers: on')
 })
 
 test('/clear 뒤 옆 패널 모드면 패널을 다시 연다', async ($, on) => {

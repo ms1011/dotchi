@@ -1,6 +1,6 @@
 import { mock } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
-import type { CommandRunInput, On } from 'claude-code'
+import type { CommandRunInput, ConfigRow, On, UiNotifyResult } from 'claude-code'
 
 import type { Frame, LineSet, PackLines } from '../types'
 
@@ -146,6 +146,14 @@ export const fakeEngine = (
     links?: readonly string[]
     /** 가짜 인터넷: URL → 응답('offline'이면 연결 실패). 없는 URL은 404 */
     http?: Record<string, { status: number; text: string } | 'offline'>
+    /** $.ui.notify의 결과. 기본은 iterm2로 보냄 */
+    notify?: UiNotifyResult
+    /** $.session.usage()의 컨텍스트 토큰 수 */
+    contextTokens?: number
+    /** /config의 행들 */
+    config?: { key: string; value: unknown }[]
+    /** config.set을 거절할지 */
+    configDeny?: boolean
   } = {},
 ) => {
   const files: Files = { ...(options.files ?? BUILTINS) }
@@ -160,6 +168,10 @@ export const fakeEngine = (
   const stored: Record<string, unknown> = { ...options.store }
   const env: Record<string, string> = { HOME, LANG: 'ko_KR.UTF-8', ...options.env }
   const zipsOut: Record<string, string[]> = {}
+  const notified: { text: string; title?: string }[] = []
+  const statuses: (string | undefined)[] = []
+  const configRows = [...(options.config ?? [])]
+  const usage = { contextTokens: options.contextTokens }
   const shell = simulateShell(files, options.zips ?? {}, zipsOut)
 
   on('store.get', (_, e) => ({ value: stored[e.key] }))
@@ -236,7 +248,34 @@ export const fakeEngine = (
     closed.push(e.id)
     return { value: undefined }
   })
-  return { files, toasts, reads, writes, runs, stdins, fetched, clock, stored, opened, closed, env, zipsOut }
+  on('ui.notify', (_, e) => {
+    notified.push({ text: e.text, ...(e.title === undefined ? {} : { title: e.title }) })
+    return { value: options.notify ?? { isSent: true, channel: 'iterm2' } }
+  })
+  on('ui.status', (_, e) => {
+    statuses.push(e.text)
+    return { value: undefined }
+  })
+  on('session.id', () => ({ value: 'test-session' }))
+  on('session.usage', () => ({
+    value: {
+      startedAt: 0,
+      context: { window: 200000, ...(usage.contextTokens === undefined ? {} : { tokens: usage.contextTokens }) },
+      rateLimits: [],
+    },
+  }))
+  on('config.list', () => ({ value: configRows.map(row => ({ key: row.key, label: row.key, value: row.value })) as unknown as ConfigRow[] }))
+  on('config.set', (_, e) => {
+    if (options.configDeny) return { deny: 'refused' }
+    const row = configRows.find(r => r.key === e.key)
+    if (row === undefined) throw new Error(`no row ${e.key}`)
+    row.value = e.value
+    return { value: e.value }
+  })
+  return {
+    files, toasts, reads, writes, runs, stdins, fetched, clock, stored, opened, closed, env, zipsOut,
+    notified, statuses, configRows, usage,
+  }
 }
 
 export const SESSION = { cwd: '/work', surface: 'terminal', isInteractive: true } as const

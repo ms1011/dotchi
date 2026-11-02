@@ -25,6 +25,7 @@ dotchi is a mod for [Claude Code](https://docs.claude.com/en/docs/claude-code). 
 - 🎞️ **Real pixel animation.** Arms, legs, ears, tails, wheels: the parts you choose move, not just the whole picture.
 - 💬 **It talks.** A comic speech bubble, its own spinner lines while Claude works, and an optional one-liner after each answer.
 - 🪟 **Above the prompt or in a side panel.** Keep your pet in a panel on the right while answers use the rest of the screen.
+- 👀 **It watches for you.** Warns at 80, 85, 90, 95 and 99% of your weekly limit, sends a desktop notification when a long answer is done, and tells you before you pick up a big chat that has been idle for a day. The side panel also keeps `git status` and the artifacts of this session in view.
 - 📦 **Share packs.** Every character is a small pack. Share it on [the dotchi pets site](https://ms1011.github.io/dotchi-packs) with one command, or export it as a zip.
 - 🌏 **Lines in four languages.** Your pet can talk in Korean, English, Japanese or Simplified Chinese. Command messages are in English.
 - 🐿️🐢 **Six pets to start with:** a squirrel hugging an acorn, a turtle that turns out to be very fast, and one from each of our languages: a tiger 🐯 (Korea), a Shiba Inu 🐕 (Japan), a panda 🐼 (China) and a bald eagle 🦅 (USA).
@@ -80,7 +81,16 @@ Everything is under `/dotchi`.
 | `/dotchi remove <character>` | Remove one of your characters |
 | `/dotchi show always\|working\|side` | Show always, only while Claude works, or in a side panel |
 | `/dotchi voice on\|off` | One-liner after each answer |
+| `/dotchi limit on\|off` | Weekly-limit warnings at 80, 85, 90, 95 and 99% |
+| `/dotchi notify on\|off` | Desktop notification when an answer took a while |
+| `/dotchi notify after <seconds>` | How long counts as a while (default 60) |
+| `/dotchi notify fix` | Switch Claude Code's notification channel to `iterm2_with_bell`, if notifications don't reach you |
+| `/dotchi rest <hours> <tokens>\|off` | Warn when you start typing into a chat of at least that many tokens after that many hours away (default 24 h, 100k) |
 | `/dotchi lang ko\|en\|ja\|zh\|auto` | Language of the pet's lines and names (`auto` follows your system) |
+
+**Notifications.** Claude Code sends its own notification when it waits for your approval; the pet only says so in its bubble. The notification for a long answer comes from dotchi. They travel as terminal notifications, so your terminal app has to show them. If it doesn't, run `/dotchi notify fix`.
+
+**Git and artifacts.** In the side panel the pet stands above the branch, the changed files (✎ marks the ones Claude edited) and the artifacts Claude published in this session. Without the panel, the status line shows a one-line summary.
 
 **Side panel.** `/dotchi show side` puts your pet in a panel on the right, about 20% of the width. It docks beside the conversation in fullscreen mode, so run `/tui fullscreen` once. Resize it with `Ctrl+X` then the arrow keys, and close it with `Ctrl+X` then `X`.
 
@@ -165,6 +175,8 @@ dotchi itself has no analytics or telemetry. Showing your pet, switching, editin
 | `/dotchi unshare <character>` | Runs `gh auth status`, then opens a public issue on ms1011/dotchi-packs asking to take that pet down. |
 
 dotchi never reads your GitHub token. `gh` uses the login you set up with `gh auth login`. Shared pets are public: only share pets made from pictures you drew, photographed or otherwise have the right to share.
+
+The weekly-limit warnings, notifications and idle-chat warning use only numbers Claude Code already gives to mods, and nothing is sent anywhere. dotchi runs `git status` (read-only, in your project folder, every 30 seconds and after edits) to fill the side panel and status line, and remembers the titles and links of artifacts published in a session in `~/.claude`'s mod storage.
 
 The [dotchi pets site](https://ms1011.github.io/dotchi-packs) runs in your browser. It loads the pets from GitHub Pages and asks `api.github.com` for each pet's 👍 count.
 

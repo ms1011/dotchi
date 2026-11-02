@@ -25,6 +25,7 @@ dotchi 是 [Claude Code](https://docs.claude.com/en/docs/claude-code) 的一个 
 - 🎞️ **真正的像素动画。** 不是整张图移动，而是你选的手臂、腿、耳朵、尾巴、车轮等部位在动。
 - 💬 **会说话。** 漫画气泡、Claude 工作时的加载台词，以及回答后的一句话（可选）。
 - 🪟 **输入框上方或侧边面板。** 可以把宠物放在右侧面板，回答使用其余的屏幕空间。
+- 👀 **替你盯着。** 每周额度超过 80、85、90、95、99% 时提醒，较长的回答结束时发桌面通知，在你继续一个闲置超过一天的大对话之前先告诉你。侧边面板里始终显示 `git status` 和本次会话的 artifact。
 - 📦 **分享角色包。** 每个角色就是一个小角色包。一条命令就能发布到 [dotchi 宠物网站](https://ms1011.github.io/dotchi-packs)，也可以导出成 zip。
 - 🌏 **台词支持四种语言。** 宠物可以用韩语、英语、日语或简体中文说话。命令提示为英语。
 - 🐿️🐢 **一开始就有六只：** 抱着橡果的松鼠、其实跑得飞快的乌龟，以及每个国家一只：老虎 🐯（韩国）、柴犬 🐕（日本）、熊猫 🐼（中国）、白头海雕 🦅（美国）
@@ -80,7 +81,16 @@ claude plugin update dotchi
 | `/dotchi remove <角色>` | 删除我的角色 |
 | `/dotchi show always\|working\|side` | 始终显示 / 仅在 Claude 工作时 / 侧边面板 |
 | `/dotchi voice on\|off` | 回答后的一句话 |
+| `/dotchi limit on\|off` | 每周额度 80、85、90、95、99% 提醒 |
+| `/dotchi notify on\|off` | 回答耗时较长时发桌面通知 |
+| `/dotchi notify after <秒>` | 多久算耗时较长（默认 60 秒） |
+| `/dotchi notify fix` | 收不到通知时，把 Claude Code 的通知渠道改为 `iterm2_with_bell` |
+| `/dotchi rest <小时> <token>\|off` | 离开这么久后，在不少于这么多 token 的对话里开始输入时提醒（默认 24 小时、100k） |
 | `/dotchi lang ko\|en\|ja\|zh\|auto` | 宠物台词和名字的语言（`auto` 跟随系统设置） |
+
+**通知。** 等待你批准时，Claude Code 会自己发通知，宠物只在气泡里说一声。较长回答结束时的通知由 dotchi 发送。它们都是终端通知，需要你的终端应用显示出来。收不到的话，运行 `/dotchi notify fix`。
+
+**git 与 artifact。** 在侧边面板里，宠物下方会显示分支、改动的文件（Claude 编辑过的带 ✎）和本次会话发布的 artifact。没有面板时，状态栏会显示一行摘要。
 
 **侧边面板。** `/dotchi show side` 会把宠物放到右侧面板（约占宽度 20%）。面板在全屏模式下会停靠在对话旁边，所以请先运行一次 `/tui fullscreen`。用 `Ctrl+X` 加方向键调整宽度，用 `Ctrl+X` 加 `X` 关闭。
 
@@ -165,6 +175,8 @@ dotchi 本身没有任何统计或遥测。显示宠物、切换、修改、导�
 | `/dotchi unshare <角色>` | 运行 `gh auth status`，然后在 ms1011/dotchi-packs 上创建一个公开 Issue，请求撤下该宠物。 |
 
 dotchi 不会直接读取你的 GitHub 令牌，`gh` 使用你通过 `gh auth login` 设置的登录。分享的宠物是公开的：请只分享用你自己画的、拍的或有权分享的图片做成的宠物。
+
+每周额度提醒、通知和闲置对话提醒只使用 Claude Code 已经提供给 mod 的数字，不会发送到任何地方。为了填充侧边面板和状态栏，dotchi 会在项目文件夹里每 30 秒以及编辑之后运行 `git status`（只读），并把本次会话发布的 artifact 的标题和链接记在 mod 的存储里。
 
 [dotchi 宠物网站](https://ms1011.github.io/dotchi-packs)在浏览器中运行。它从 GitHub Pages 加载宠物，并向 `api.github.com` 查询每只宠物的 👍 数。
 

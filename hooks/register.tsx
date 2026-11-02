@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register, Timer } from 'claude-code'
+import type { EngineInterface, Register, Timer, UiNotifyResult } from 'claude-code'
 
-import type { Art, Character, Lang, LineSet, Settings } from '../types'
+import type { Art, ArtifactLink, Character, GitState, Lang, LineSet, Settings } from '../types'
 import { cropColumns, encodeFrame, halve, usedColumns } from './dots'
 import { detectLang, LANG_NAMES, t } from './i18n'
 import type { BandLayout } from './layout'
@@ -20,18 +20,121 @@ import {
 } from './library'
 import { endingLine, idleLine, spinnerLine } from './lines'
 import { frameMsOf, isId, nameOf, pickLines, ticksPerLine } from './packs'
+import { parseStatus } from './gitstat'
+import { addArtifact, artifactOf, gitLines, parseArtifacts, summaryOf } from './info'
+import type { LimitAlert, LimitSeen } from './limits'
+import { limitAlert } from './limits'
+import { shouldWarnRest } from './rest'
 import { DEFAULT_SETTINGS, normalizeSettings, parseDotchi } from './settings'
+import type { TalkKey } from './talk'
+import { duration, say, tokens, when } from './talk'
 import { PACKS_REPO, petPage, remoteIdOf, shareBody, SITE, suggestId, takenOf, unshareBody } from './share'
 
 const settingsAtom = atom({ plugin: 'dotchi', key: 'settings' } as const, DEFAULT_SETTINGS)
 const tickAtom = atom({ plugin: 'dotchi', key: 'tick' } as const, 0)
 const workingAtom = atom({ plugin: 'dotchi', key: 'working' } as const, false)
 const paneAtom = atom({ plugin: 'dotchi', key: 'paneShown' } as const, false)
+const gitAtom = atom({ plugin: 'dotchi', key: 'git' } as const, null as GitState | null)
+const artifactsAtom = atom({ plugin: 'dotchi', key: 'artifacts' } as const, [] as ArtifactLink[])
+const touchedAtom = atom({ plugin: 'dotchi', key: 'touched' } as const, [] as string[])
+const alertAtom = atom({ plugin: 'dotchi', key: 'alert' } as const, null as { text: string; until: number } | null)
+
+/** /dotchi notify fix가 고르는 알림 경로 */
+const NOTIFY_CHANNEL = 'iterm2_with_bell'
+
+/** 경고 말풍선이 떠 있는 시간 */
+const ALERT_MS = 10000
 
 /** 옆 패널의 id와, 너비를 모를 때 쓰는 칸 수 */
 const PANE = 'dotchi'
 const PANE_COLUMNS = 48
+/** 옆 패널에서 펫(작은 그림 + 말풍선)에게 남겨 두는 줄 수 */
+const PET_MIN_ROWS = 14
 const NO_LINES: LineSet = { spinner: [], idle: [], ending: [] }
+
+/** 경고 말풍선을 띄운다. 10초 뒤나 사용자가 메시지를 보내면 사라진다 */
+async function showAlert($: EngineInterface, text: string): Promise<void> {
+  const until = (await $.clock.now()) + ALERT_MS
+  await update($, alertAtom, () => ({ text, until }))
+  $.clock.after(ALERT_MS, () => void update($, alertAtom, a => (a !== null && a.until <= until ? null : a)))
+}
+
+/** git을 다시 읽는 간격 */
+const GIT_EVERY_MS = 30000
+/** 파일을 바꿀 수 있는 도구: 끝나면 git을 다시 읽는다 */
+const EDIT_TOOLS = new Set(['Edit', 'Write', 'NotebookEdit'])
+/** git을 읽는 중이면 또 읽지 않고, 끝난 뒤 한 번 더 읽는다 (몰리면 한 번으로, 오래된 목록을 남기지 않게) */
+let gitBusy = false
+let gitDirty = false
+/** 저장소 뿌리 (Claude가 고친 파일의 경로를 git 경로로 바꿀 때) */
+let repoRoot: string | null = null
+
+/** git 상태를 다시 읽고 상태 줄을 맞춘다. 저장소가 아니거나 git이 없으면 git 영역을 숨긴다 */
+async function refreshGit($: EngineInterface, lang: Lang): Promise<void> {
+  if (gitBusy) {
+    gitDirty = true
+    return
+  }
+  gitBusy = true
+  try {
+    do {
+      gitDirty = false
+      const cwd = await $.session.cwd()
+      // --no-optional-locks: 상태를 읽다가 index.lock을 잡아 Claude의 git 명령(commit 등)을 막지 않게
+      const run = (args: string[]) =>
+        $.process.run(['git', '--no-optional-locks', '-c', 'core.quotePath=false', ...args], { cwd, timeoutMs: 5000 }).catch(() => null)
+      const status = await run(['status', '--porcelain=v2', '--branch'])
+      if (status === null || status.exitCode !== 0) {
+        repoRoot = null
+        await update($, gitAtom, () => null)
+      } else {
+        if (repoRoot === null) {
+          const top = await run(['rev-parse', '--show-toplevel'])
+          repoRoot = top !== null && top.exitCode === 0 ? top.stdout.trim() : cwd
+        }
+        await update($, gitAtom, () => parseStatus(status.stdout))
+      }
+    } while (gitDirty)
+  } finally {
+    gitBusy = false
+  }
+  await syncStatus($, lang)
+}
+
+/** 상태 줄 요약: 옆 패널이 떠 있으면 패널에 다 나오므로 지운다 */
+async function syncStatus($: EngineInterface, lang: Lang): Promise<void> {
+  const paneShown = Boolean(await read($, paneAtom))
+  $.ui.status(paneShown ? undefined : summaryOf(await read($, gitAtom), await read($, artifactsAtom), lang))
+}
+
+/** 이 세션의 아티팩트 목록을 저장소에서 읽는다 */
+async function loadArtifacts($: EngineInterface): Promise<void> {
+  const saved = parseArtifacts(await $.store.get(`artifacts:${await $.session.id()}`))
+  await update($, artifactsAtom, () => saved)
+}
+
+/** 이 세션의 마지막 턴 시각 (저장된 것). 없으면 null */
+async function loadLastTurn($: EngineInterface): Promise<number | null> {
+  const saved = await $.store.get(`lastTurnAt:${await $.session.id()}`)
+  return typeof saved === 'number' && Number.isFinite(saved) ? saved : null
+}
+
+/**
+ * 긴 작업이 끝났다: 데스크톱 알림 + 말풍선.
+ * 알림이 갈 길이 없으면(no-channel) 말풍선으로 고치는 법(hint)을 대신 말한다
+ */
+async function notifyDone($: EngineInterface, title: string, text: string, hint: string | null): Promise<UiNotifyResult | null> {
+  const sent = await $.ui.notify(text, { title }).catch(() => null)
+  const noChannel = sent?.isSent === false && sent.reason === 'no-channel'
+  await showAlert($, noChannel && hint !== null ? hint : text)
+  return sent
+}
+
+/** 지금 떠 있는 경고 말풍선의 글. 없으면 null */
+async function activeAlert($: EngineInterface): Promise<string | null> {
+  const alert = await read($, alertAtom)
+  return alert === null ? null : alert.text
+}
 
 
 /** 설정을 바꾸고 저장한다: 다음 세션에도 유지 */
@@ -125,6 +228,18 @@ export const register: Register = on => {
   /** 턴마다 문구 시작점을 바꾼다 */
   let offset = 0
   let timer: Timer | null = null
+  /** git을 30초마다 다시 읽는 타이머 */
+  let gitTimer: Timer | null = null
+  /** 도찌가 보낸 마지막 알림의 결과 (/dotchi에 알림 경로를 보여 줄 때) */
+  let lastNotify: UiNotifyResult | null = null
+  /** '알림이 안 가고 있어요'는 세션마다 한 번만 */
+  let hintedNoChannel = false
+  /** 이 세션의 마지막 (메인) 턴이 끝난 시각. 다시 연 세션은 저장된 값 */
+  let lastTurnAt: number | null = null
+  /** 한도 측정을 한 번에 하나씩 처리하는 줄 */
+  let measureLock: Promise<void> = Promise.resolve()
+  /** 쉬고 돌아왔을 때 경고는 쉴 때마다 한 번만 */
+  let restWarned = false
 
   /** 컴퓨터 언어 (세션 시작 때 읽는다). 설정의 lang이 있으면 그쪽이 먼저 */
   let systemLang: Lang = 'en'
@@ -146,6 +261,16 @@ export const register: Register = on => {
     })
   const changed = (settings: Settings) => t('changed', { status: status(settings) })
 
+  /** 펫이 하는 말: 지금 언어로 */
+  const talk = (key: TalkKey, vars: Record<string, string> = {}) => say(lang(), key, vars)
+  const limitText = (alert: LimitAlert) => {
+    const percent = String(Math.floor(alert.percent))
+    if (alert.resetsAt === null) return talk('limitBare', { percent })
+    const reset = when(lang(), alert.resetsAt)
+    if (alert.emptyAt !== null) return talk('limitForecast', { percent, reset, empty: when(lang(), alert.emptyAt) })
+    return talk('limit', { percent, reset })
+  }
+
   const perLineFor = (ch: Character | null) => ticksPerLine(ch === null ? 250 : frameMsOf(ch.meta))
 
   /** 말풍선에 쓸 말: 일하는 중이면 일하는 문구, 쉬면 쉬는 문구 */
@@ -156,6 +281,9 @@ export const register: Register = on => {
   }
 
   on('session.start', async ($, e, next) => {
+    hintedNoChannel = false
+    restWarned = false
+    lastTurnAt = await loadLastTurn($)
     await $.command.register({ name: 'dotchi', description: 'Your pixel pet: switch, hatch, install, show' })
     const saved = await loadSettings($)
     systemLang = detectLang({
@@ -166,6 +294,11 @@ export const register: Register = on => {
     lang = () => langOf(saved)
     characters = await loadCharacters($)
     if (saved.show === 'side') await openPane($, PANE_COLUMNS)
+    await loadArtifacts($)
+    gitTimer?.cancel()
+    gitTimer = $.clock.every(GIT_EVERY_MS, () => void refreshGit($, lang()).catch(() => undefined))
+    // 큰 저장소에서도 세션 시작을 붙잡지 않게 기다리지 않는다
+    void refreshGit($, lang()).catch(() => undefined)
 
     return next(e)
   })
@@ -173,10 +306,15 @@ export const register: Register = on => {
   // /clear, /resume, /branch는 세션 상태를 기본값으로 되돌린다 (session.start는 다시 오지 않는다):
   // 저장된 설정을 다시 읽고, 옆 패널 모드였으면 패널 상태도 되살린다
   on('classic.SessionStart', { source: ['clear', 'resume', 'fork'] }, async ($, e, next) => {
+    restWarned = false
+    lastTurnAt = await loadLastTurn($)
     const saved = await loadSettings($)
     lang = () => langOf(saved)
     characters = await loadCharacters($)
     if (saved.show === 'side') await openPane($, PANE_COLUMNS)
+    await update($, touchedAtom, () => [])
+    await loadArtifacts($)
+    void refreshGit($, lang()).catch(() => undefined)
     $.ui.invalidate('ui.render')
     return next(e)
   })
@@ -187,8 +325,28 @@ export const register: Register = on => {
     const command = parseDotchi(e.args, (await $.env.get('HOME')) ?? '')
 
     switch (command.kind) {
-      case 'status':
-        return { text: status(current) }
+      case 'status': {
+        const usage = await $.session.usage().catch(() => null)
+        const week = usage?.rateLimits.find(w => w.kind === 'seven_day')
+        const reset = week?.resetsAt === undefined ? '' : ` (resets ${when('en', Date.parse(week.resetsAt))})`
+        const used = usage?.context.tokens
+        const channel =
+          lastNotify === null
+            ? 'channel unknown until the first one'
+            : lastNotify.isSent
+              ? `channel ${lastNotify.channel}`
+              : `not sent: ${lastNotify.reason}`
+        const lines = [
+          status(current),
+          `Limit warning: ${current.limit ? 'on' : 'off'}${week === undefined ? '' : ` · weekly ${Math.floor(week.percentUsed)}%${reset}`}`,
+          ...(used === undefined ? [] : [`Context: ${tokens(used)} tokens`]),
+          current.notify ? `Notifications: on · after ${current.notifyAfterSec} s · ${channel}` : 'Notifications: off',
+          current.rest
+            ? `Rest warning: after ${current.rest.hours} h away and ${tokens(current.rest.tokens)} tokens`
+            : 'Rest warning: off',
+        ]
+        return { text: lines.join('\n') }
+      }
       case 'usage':
         return { text: t('usage') }
       case 'list': {
@@ -218,6 +376,30 @@ export const register: Register = on => {
         const settings = { ...current, voice: command.on }
         await saveSettings($, settings)
         return { text: changed(settings) }
+      }
+      case 'limit':
+      case 'notify': {
+        const settings = { ...current, [command.kind]: command.on }
+        await saveSettings($, settings)
+        return { text: changed(settings) }
+      }
+      case 'notifyAfter': {
+        const settings = { ...current, notifyAfterSec: command.seconds }
+        await saveSettings($, settings)
+        return { text: changed(settings) }
+      }
+      case 'rest': {
+        const settings = { ...current, rest: command.rest }
+        await saveSettings($, settings)
+        return { text: changed(settings) }
+      }
+      case 'notifyFix': {
+        // 사용자가 Termius에서 확인한 경로: OSC 9 알림 + 벨
+        const rows = await $.config.list().catch(() => [])
+        const row = rows.find(r => /notif/i.test(r.key) && typeof r.value === 'string')
+        const done = row === undefined ? null : await $.config.set({ key: row.key, value: NOTIFY_CHANNEL }).catch(() => null)
+        if (row === undefined || done === null || 'deny' in done) return { text: t('notifyFixManual') }
+        return { text: t('notifyFixed', { channel: NOTIFY_CHANNEL, old: String(row.value) }) }
       }
       case 'install': {
         characters = await loadCharacters($)
@@ -367,14 +549,108 @@ export const register: Register = on => {
           await $.ui.close({ id: PANE })
           await update($, paneAtom, () => false)
         }
+        await syncStatus($, lang())
         return { text: changed(settings) }
       }
     }
   })
 
+  // 승인 대기: 엔진이 직접 알림을 보낸다. 겹치지 않게 도찌는 말풍선만
+  on('classic.Notification', async ($, e, next) => {
+    if (e.notification_type === 'permission_prompt') {
+      const settings = normalizeSettings(await read($, settingsAtom))
+      lang = () => langOf(settings)
+      await showAlert($, talk('permission'))
+    }
+    return next(e)
+  })
+
+  // 주간 한도: 80/85/90/95/99%를 넘을 때 한 번씩 (5시간 창은 무시)
+  on('session.measure', async ($, e, next) => {
+    const result = await next(e)
+    if (!e.changed.includes('rateLimits')) return result
+    // 측정이 겹쳐 와도(서브에이전트 여럿) 읽고-계산하고-쓰는 사이에 끼어들지 못하게 줄을 세운다
+    const turn = measureLock.then(async () => {
+      const settings = normalizeSettings(await read($, settingsAtom))
+      if (!settings.limit) return
+      lang = () => langOf(settings)
+      const stored = await $.store.get('limitSeen')
+      const seen = (typeof stored === 'object' && stored !== null ? stored : {}) as LimitSeen
+      const { alert, seen: next2 } = limitAlert(e.rateLimits, seen, await $.clock.now())
+      await $.store.set('limitSeen', next2)
+      if (alert === null) return
+      const text = limitText(alert)
+      await showAlert($, text)
+      await $.ui.notify(text, { title: nameFor(currentOf(settings)) }).catch(() => undefined)
+    })
+    measureLock = turn.catch(() => undefined)
+    await turn
+    return result
+  })
+
+  // 오래 쉬고 큰 대화를 이어가려 할 때: 입력을 시작하는 순간 한 번 말한다 (막지 않는다)
+  on('prompt.edit', async ($, e, next) => {
+    if (!restWarned && lastTurnAt !== null) {
+      const settings = normalizeSettings(await read($, settingsAtom))
+      const now = await $.clock.now()
+      // 시간 조건을 먼저 본다: 타이핑마다 사용량을 묻지 않게
+      if (shouldWarnRest(lastTurnAt, now, Number.MAX_SAFE_INTEGER, settings.rest)) {
+        const used = (await $.session.usage().catch(() => null))?.context.tokens
+        // 다시 연 직후에는 토큰 수를 아직 모를 수 있다: 알게 될 때까지 다음 타이핑에서 다시 본다
+        if (used !== undefined) {
+          restWarned = true
+          if (shouldWarnRest(lastTurnAt, now, used, settings.rest)) {
+            lang = () => langOf(settings)
+            await showAlert($, talk('rest', { tokens: tokens(used) }))
+          }
+        }
+      }
+    }
+    return next(e)
+  })
+
+  // 파일을 바꾸는 도구가 끝나면 git을 다시 읽고, Claude가 고친 파일을 기억한다.
+  // 아티팩트를 올리거나 열면 목록에 넣는다
+  on('tool.call', async ($, e, next) => {
+    const ran = await next(e)
+    if (ran.deny !== undefined || ran.isError === true) return ran
+    if (EDIT_TOOLS.has(e.tool)) {
+      const input = e as { file_path?: unknown; notebook_path?: unknown }
+      const path = typeof input.file_path === 'string' ? input.file_path : input.notebook_path
+      if (typeof path === 'string') {
+        const rel = repoRoot !== null && path.startsWith(`${repoRoot}/`) ? path.slice(repoRoot.length + 1) : path
+        await update($, touchedAtom, list => (list.includes(rel) ? list : [...list, rel]))
+      }
+    }
+    if (EDIT_TOOLS.has(e.tool) || e.tool === 'Bash') void refreshGit($, lang()).catch(() => undefined)
+    if (e.tool === 'Artifact') {
+      const input = e as { action?: unknown; asset?: unknown; file_path?: unknown }
+      const isPage = input.action === undefined || input.action === 'publish' || input.action === 'open'
+      const link = isPage && input.asset !== true
+        ? artifactOf(ran.result, ran.text, typeof input.file_path === 'string' ? input.file_path : undefined)
+        : null
+      if (link !== null) {
+        const list = addArtifact(await read($, artifactsAtom), link)
+        await update($, artifactsAtom, () => list)
+        await $.store.set(`artifacts:${await $.session.id()}`, list)
+        await syncStatus($, lang())
+      }
+    }
+    return ran
+  })
+
+  // 메시지를 보내면 경고 말풍선은 할 일을 다 했다
+  on('prompt.submit', async ($, e, next) => {
+    await update($, alertAtom, () => null)
+    return next(e)
+  })
+
   on('ui.close', async ($, e, next) => {
     // 사람이 패널을 닫으면 입력창 위 띠로 돌아간다
-    if (e.id === PANE) await update($, paneAtom, () => false)
+    if (e.id === PANE) {
+      await update($, paneAtom, () => false)
+      await syncStatus($, lang())
+    }
     return next(e)
   })
 
@@ -392,6 +668,10 @@ export const register: Register = on => {
 
   on('turn.complete', async ($, e, next) => {
     if (e.agentId !== undefined) return next(e)
+    lastTurnAt = await $.clock.now()
+    restWarned = false
+    void refreshGit($, lang()).catch(() => undefined)
+    await $.store.set(`lastTurnAt:${await $.session.id()}`, lastTurnAt)
     timer?.cancel()
     timer = null
     await update($, tickAtom, () => 0)
@@ -400,6 +680,12 @@ export const register: Register = on => {
     const result = await next(e)
     const settings = normalizeSettings(await read($, settingsAtom))
     lang = () => langOf(settings)
+    if (settings.notify && e.reason === 'answer' && e.durationMs >= settings.notifyAfterSec * 1000) {
+      const text = talk('done', { duration: duration(lang(), e.durationMs) })
+      const hint = hintedNoChannel ? null : talk('noChannel')
+      lastNotify = await notifyDone($, nameFor(currentOf(settings)), text, hint)
+      if (lastNotify?.isSent === false && lastNotify.reason === 'no-channel') hintedNoChannel = true
+    }
     if (!settings.voice || e.reason !== 'answer' || e.answer.trim() === '') return result
     const sound = endingLine(linesFor(currentOf(settings)), Math.random())
     return sound === null ? result : { ...result, text: sound }
@@ -418,7 +704,9 @@ export const register: Register = on => {
     const settings = normalizeSettings(await read($, settingsAtom))
     lang = () => langOf(settings)
     const { isWorking, hasSurvey, maxRows, bodyColumns } = e.props
-    if (hasSurvey || (settings.show === 'working' && !isWorking)) return next(e)
+    const alert = await activeAlert($)
+    // 경고 말풍선은 '일할 때만' 모드에서 쉬는 중이어도 펫을 꺼내 보여준다
+    if (hasSurvey || (settings.show === 'working' && !isWorking && alert === null)) return next(e)
     // 옆 패널이 떠 있으면 캐릭터가 두 번 나오지 않게 띠는 비운다
     if (settings.show === 'side' && (await read($, paneAtom))) return next(e)
 
@@ -426,7 +714,7 @@ export const register: Register = on => {
     const { Box, Text } = $.ui.resolve(e)
     const bubble = (
       <Box borderStyle="round" paddingX={1}>
-        <Text>{wordsFor(settings, isWorking, tick)}</Text>
+        <Text>{alert ?? wordsFor(settings, isWorking, tick)}</Text>
       </Box>
     )
     const art = currentOf(settings)?.art ?? null
@@ -456,24 +744,68 @@ export const register: Register = on => {
     const tick = Number(await read($, tickAtom))
     const { bodyColumns, scroll } = e.props
     const { Box, Text } = $.ui.resolve(e)
+    const alert = await activeAlert($)
     const bubble = (
       <Box borderStyle="round" paddingX={1}>
-        <Text wrap="wrap">{wordsFor(settings, isWorking, tick)}</Text>
+        <Text wrap="wrap">{alert ?? wordsFor(settings, isWorking, tick)}</Text>
       </Box>
     )
+    // 펫 아래: git 상태와 이 세션의 아티팩트. 펫이 작은 그림(12줄)으로 설 자리는 남긴다
+    const { Link } = $.ui.resolve(e)
+    const git = await read($, gitAtom)
+    const artifacts = await read($, artifactsAtom)
+    const touched = new Set(await read($, touchedAtom))
+    const infoRoom = Math.max(4, scroll.bodyRows - PET_MIN_ROWS)
+    const artifactRows = Math.min(artifacts.length, Math.max(1, Math.floor(infoRoom / 3)))
+    const gitRoom = infoRoom - (artifactRows > 0 ? artifactRows + 1 : 0) - 1
+    const lines = git === null ? [] : gitLines(git, touched, bodyColumns, gitRoom, lang())
+    const info = (
+      <Box key="info" flexDirection="column" width={bodyColumns}>
+        {lines.map((line, i) => (
+          <Text key={`git-${i}`} wrap="truncate">
+            {line}
+          </Text>
+        ))}
+        {artifactRows > 0 && lines.length > 0 ? <Text key="gap"> </Text> : null}
+        {artifacts.slice(0, artifactRows).map(item => (
+          <Text key={item.url} wrap="truncate">
+            {'🔗 '}
+            <Link href={item.url} label={item.title} />
+          </Text>
+        ))}
+      </Box>
+    )
+    const used = lines.length + (artifactRows > 0 ? artifactRows + (lines.length > 0 ? 1 : 0) : 0)
+    const hasInfo = used > 0
+    const petRows = scroll.bodyRows - (hasInfo ? used + 1 : 0)
+
     const art = currentOf(settings)?.art ?? null
-    const layout = paneLayout(bodyColumns, scroll.bodyRows, e.surface)
-    if (art === null || layout === 'text' || e.surface !== 'terminal') return bubble
+    const layout = paneLayout(bodyColumns, petRows, e.surface)
+    if (art === null || layout === 'text' || e.surface !== 'terminal') {
+      return hasInfo ? (
+        <Box flexDirection="column">
+          {bubble}
+          {info}
+        </Box>
+      ) : (
+        bubble
+      )
+    }
 
     const { Raster } = $.ui.resolve(e)
     const dots = dotsFor(art, isWorking, tick, layout)
 
-    // 세로로 긴 패널: 말풍선이 머리 위에 뜨고 꼬리가 아래 캐릭터를 가리킨다. 캐릭터는 바닥(입력창 쪽)에 선다
+    // 세로로 긴 패널: 말풍선이 머리 위에 뜨고 꼬리가 아래 캐릭터를 가리킨다.
+    // 정보가 없으면 캐릭터는 바닥(입력창 쪽)에 서고, 있으면 그 아래에 git과 아티팩트
     return (
-      <Box flexDirection="column" alignItems="center" justifyContent="flex-end" height={scroll.bodyRows}>
-        {bubble}
-        <Text>{'╲'}</Text>
-        <Raster key="dots" columns={dots.columns} rows={dots.rows} cells={dots.cells} />
+      <Box flexDirection="column" height={scroll.bodyRows}>
+        <Box flexDirection="column" alignItems="center" justifyContent="flex-end" height={petRows}>
+          {bubble}
+          <Text>{'╲'}</Text>
+          <Raster key="dots" columns={dots.columns} rows={dots.rows} cells={dots.cells} />
+        </Box>
+        {hasInfo ? <Text> </Text> : null}
+        {hasInfo ? info : null}
       </Box>
     )
   })
