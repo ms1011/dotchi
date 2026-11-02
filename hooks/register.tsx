@@ -315,8 +315,28 @@ export const register: Register = on => {
     const command = parseDotchi(e.args, (await $.env.get('HOME')) ?? '')
 
     switch (command.kind) {
-      case 'status':
-        return { text: status(current) }
+      case 'status': {
+        const usage = await $.session.usage().catch(() => null)
+        const week = usage?.rateLimits.find(w => w.kind === 'seven_day')
+        const reset = week?.resetsAt === undefined ? '' : ` (resets ${when('en', Date.parse(week.resetsAt))})`
+        const used = usage?.context.tokens
+        const channel =
+          lastNotify === null
+            ? 'channel unknown until the first one'
+            : lastNotify.isSent
+              ? `channel ${lastNotify.channel}`
+              : `not sent: ${lastNotify.reason}`
+        const lines = [
+          status(current),
+          `Limit warning: ${current.limit ? 'on' : 'off'}${week === undefined ? '' : ` · weekly ${Math.floor(week.percentUsed)}%${reset}`}`,
+          ...(used === undefined ? [] : [`Context: ${tokens(used)} tokens`]),
+          current.notify ? `Notifications: on · after ${current.notifyAfterSec} s · ${channel}` : 'Notifications: off',
+          current.rest
+            ? `Rest warning: after ${current.rest.hours} h away and ${tokens(current.rest.tokens)} tokens`
+            : 'Rest warning: off',
+        ]
+        return { text: lines.join('\n') }
+      }
       case 'usage':
         return { text: t('usage') }
       case 'list': {

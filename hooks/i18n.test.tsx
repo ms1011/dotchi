@@ -38,13 +38,13 @@ test('/dotchi lang ja는 대사·이름 언어만 바꾸고 안내는 영어 그
   await $.session.start(SESSION)
   await dotchi($, 'lang ja')
   expect((stored.settings as { lang: string }).lang).toBe('ja')
-  expect((await dotchi($, '')).text).toBe('Now: Squirrel · Shown: while working · One-liner after answers: off')
+  expect((await dotchi($, '')).text?.split('\n')[0]).toBe('Now: Squirrel · Shown: while working · One-liner after answers: off')
 })
 
 test('lang auto면 대사·이름은 컴퓨터 언어를 따르고, 안내는 어느 언어든 영어', async ($, on) => {
   setup(on, { LANG: 'ko_KR.UTF-8' })
   await $.session.start(SESSION)
-  expect((await dotchi($, '')).text).toBe('Now: 다람쥐 · Shown: while working · One-liner after answers: off')
+  expect((await dotchi($, '')).text?.split('\n')[0]).toBe('Now: 다람쥐 · Shown: while working · One-liner after answers: off')
 })
 
 test('팩에 지금 언어 대사가 없으면 영어 대사로 말풍선', async ($, on) => {
