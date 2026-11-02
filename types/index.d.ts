@@ -33,6 +33,13 @@ export type Character = { meta: PackMeta; art: Art; lines: PackLines; dir: strin
 
 declare module 'claude-code' {
   interface PluginState {
-    dotchi: { settings: Settings; tick: number; working: boolean; paneShown: boolean }
+    dotchi: {
+      settings: Settings
+      tick: number
+      working: boolean
+      paneShown: boolean
+      /** 잠깐 띄우는 경고 말풍선. until(ms)이 지나면 사라진다 */
+      alert: { text: string; until: number } | null
+    }
   }
 }

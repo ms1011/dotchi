@@ -20,18 +20,39 @@ import {
 } from './library'
 import { endingLine, idleLine, spinnerLine } from './lines'
 import { frameMsOf, isId, nameOf, pickLines, ticksPerLine } from './packs'
+import type { LimitAlert, LimitSeen } from './limits'
+import { limitAlert } from './limits'
 import { DEFAULT_SETTINGS, normalizeSettings, parseDotchi } from './settings'
+import type { TalkKey } from './talk'
+import { say, when } from './talk'
 import { PACKS_REPO, petPage, remoteIdOf, shareBody, SITE, suggestId, takenOf, unshareBody } from './share'
 
 const settingsAtom = atom({ plugin: 'dotchi', key: 'settings' } as const, DEFAULT_SETTINGS)
 const tickAtom = atom({ plugin: 'dotchi', key: 'tick' } as const, 0)
 const workingAtom = atom({ plugin: 'dotchi', key: 'working' } as const, false)
 const paneAtom = atom({ plugin: 'dotchi', key: 'paneShown' } as const, false)
+const alertAtom = atom({ plugin: 'dotchi', key: 'alert' } as const, null as { text: string; until: number } | null)
+
+/** 경고 말풍선이 떠 있는 시간 */
+const ALERT_MS = 10000
 
 /** 옆 패널의 id와, 너비를 모를 때 쓰는 칸 수 */
 const PANE = 'dotchi'
 const PANE_COLUMNS = 48
 const NO_LINES: LineSet = { spinner: [], idle: [], ending: [] }
+
+/** 경고 말풍선을 띄운다. 10초 뒤나 사용자가 메시지를 보내면 사라진다 */
+async function showAlert($: EngineInterface, text: string): Promise<void> {
+  const until = (await $.clock.now()) + ALERT_MS
+  await update($, alertAtom, () => ({ text, until }))
+  $.clock.after(ALERT_MS, () => void update($, alertAtom, a => (a !== null && a.until <= until ? null : a)))
+}
+
+/** 지금 떠 있는 경고 말풍선의 글. 없으면 null */
+async function activeAlert($: EngineInterface): Promise<string | null> {
+  const alert = await read($, alertAtom)
+  return alert === null ? null : alert.text
+}
 
 
 /** 설정을 바꾸고 저장한다: 다음 세션에도 유지 */
@@ -145,6 +166,16 @@ export const register: Register = on => {
       voice: t(settings.voice ? 'voiceOn' : 'voiceOff'),
     })
   const changed = (settings: Settings) => t('changed', { status: status(settings) })
+
+  /** 펫이 하는 말: 지금 언어로 */
+  const talk = (key: TalkKey, vars: Record<string, string> = {}) => say(lang(), key, vars)
+  const limitText = (alert: LimitAlert) => {
+    const percent = String(Math.floor(alert.percent))
+    if (alert.resetsAt === null) return talk('limitBare', { percent })
+    const reset = when(lang(), alert.resetsAt)
+    if (alert.emptyAt !== null) return talk('limitForecast', { percent, reset, empty: when(lang(), alert.emptyAt) })
+    return talk('limit', { percent, reset })
+  }
 
   const perLineFor = (ch: Character | null) => ticksPerLine(ch === null ? 250 : frameMsOf(ch.meta))
 
@@ -390,6 +421,30 @@ export const register: Register = on => {
     }
   })
 
+  // 주간 한도: 80/85/90/95/99%를 넘을 때 한 번씩 (5시간 창은 무시)
+  on('session.measure', async ($, e, next) => {
+    const result = await next(e)
+    if (!e.changed.includes('rateLimits')) return result
+    const settings = normalizeSettings(await read($, settingsAtom))
+    if (!settings.limit) return result
+    lang = () => langOf(settings)
+    const stored = await $.store.get('limitSeen')
+    const seen = (typeof stored === 'object' && stored !== null ? stored : {}) as LimitSeen
+    const { alert, seen: next2 } = limitAlert(e.rateLimits, seen, await $.clock.now())
+    if (alert === null) return result
+    await $.store.set('limitSeen', next2)
+    const text = limitText(alert)
+    await showAlert($, text)
+    await $.ui.notify(text, { title: nameFor(currentOf(settings)) }).catch(() => undefined)
+    return result
+  })
+
+  // 메시지를 보내면 경고 말풍선은 할 일을 다 했다
+  on('prompt.submit', async ($, e, next) => {
+    await update($, alertAtom, () => null)
+    return next(e)
+  })
+
   on('ui.close', async ($, e, next) => {
     // 사람이 패널을 닫으면 입력창 위 띠로 돌아간다
     if (e.id === PANE) await update($, paneAtom, () => false)
@@ -436,7 +491,9 @@ export const register: Register = on => {
     const settings = normalizeSettings(await read($, settingsAtom))
     lang = () => langOf(settings)
     const { isWorking, hasSurvey, maxRows, bodyColumns } = e.props
-    if (hasSurvey || (settings.show === 'working' && !isWorking)) return next(e)
+    const alert = await activeAlert($)
+    // 경고 말풍선은 '일할 때만' 모드에서 쉬는 중이어도 펫을 꺼내 보여준다
+    if (hasSurvey || (settings.show === 'working' && !isWorking && alert === null)) return next(e)
     // 옆 패널이 떠 있으면 캐릭터가 두 번 나오지 않게 띠는 비운다
     if (settings.show === 'side' && (await read($, paneAtom))) return next(e)
 
@@ -444,7 +501,7 @@ export const register: Register = on => {
     const { Box, Text } = $.ui.resolve(e)
     const bubble = (
       <Box borderStyle="round" paddingX={1}>
-        <Text>{wordsFor(settings, isWorking, tick)}</Text>
+        <Text>{alert ?? wordsFor(settings, isWorking, tick)}</Text>
       </Box>
     )
     const art = currentOf(settings)?.art ?? null
@@ -474,9 +531,10 @@ export const register: Register = on => {
     const tick = Number(await read($, tickAtom))
     const { bodyColumns, scroll } = e.props
     const { Box, Text } = $.ui.resolve(e)
+    const alert = await activeAlert($)
     const bubble = (
       <Box borderStyle="round" paddingX={1}>
-        <Text wrap="wrap">{wordsFor(settings, isWorking, tick)}</Text>
+        <Text wrap="wrap">{alert ?? wordsFor(settings, isWorking, tick)}</Text>
       </Box>
     )
     const art = currentOf(settings)?.art ?? null

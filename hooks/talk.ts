@@ -6,6 +6,7 @@ import type { Lang } from '../types'
  */
 const KO = {
   limit: '주간 한도 {percent}%! ({reset} 리셋)',
+  limitBare: '주간 한도 {percent}%!',
   limitForecast: '주간 한도 {percent}%! 지금 속도면 {empty}쯤 바닥나요 ({reset} 리셋)',
   permission: '허락이 필요해요!',
   done: '다 했어요! ({duration})',
@@ -22,6 +23,7 @@ export const TALK: Record<Lang, Record<TalkKey, string>> = {
   ko: KO,
   en: {
     limit: 'Weekly limit at {percent}%! (resets {reset})',
+    limitBare: 'Weekly limit at {percent}%!',
     limitForecast: 'Weekly limit at {percent}%! At this pace it runs out around {empty} (resets {reset})',
     permission: 'I need your OK!',
     done: 'All done! ({duration})',
@@ -33,6 +35,7 @@ export const TALK: Record<Lang, Record<TalkKey, string>> = {
   },
   ja: {
     limit: '週の上限 {percent}%！（{reset} リセット）',
+    limitBare: '週の上限 {percent}%！',
     limitForecast: '週の上限 {percent}%！このペースだと {empty} ごろ使い切りそう（{reset} リセット）',
     permission: '許可がほしいです！',
     done: 'できました！（{duration}）',
@@ -44,6 +47,7 @@ export const TALK: Record<Lang, Record<TalkKey, string>> = {
   },
   zh: {
     limit: '每周额度已用 {percent}%！（{reset} 重置）',
+    limitBare: '每周额度已用 {percent}%！',
     limitForecast: '每周额度已用 {percent}%！照这个速度 {empty} 左右会用完（{reset} 重置）',
     permission: '需要你的允许！',
     done: '做完啦！（{duration}）',
