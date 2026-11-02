@@ -219,6 +219,24 @@ export const register: Register = on => {
         await saveSettings($, settings)
         return { text: changed(settings) }
       }
+      case 'limit':
+      case 'notify': {
+        const settings = { ...current, [command.kind]: command.on }
+        await saveSettings($, settings)
+        return { text: changed(settings) }
+      }
+      case 'notifyAfter': {
+        const settings = { ...current, notifyAfterSec: command.seconds }
+        await saveSettings($, settings)
+        return { text: changed(settings) }
+      }
+      case 'rest': {
+        const settings = { ...current, rest: command.rest }
+        await saveSettings($, settings)
+        return { text: changed(settings) }
+      }
+      case 'notifyFix':
+        return { text: t('usage') }
       case 'install': {
         characters = await loadCharacters($)
         // 있는 로컬 경로가 먼저. 없으면 사이트의 펫 id나 주소로 본다
