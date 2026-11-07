@@ -41,12 +41,16 @@ DESCRIPTIONS = {
     'eagle': 'A proud bald eagle from the USA that soars over your code.',
 }
 
+# 상태 줄 맨 앞에 서는 이모지: 펫이 들고 있거나 좋아하는 것
+ICONS = {'squirrel': '🌰', 'turtle': '🍓', 'tiger': '🐯', 'shiba': '🦴', 'panda': '🎋', 'eagle': '🪶'}
+
 
 def build(pid, module):
     draw = getattr(module, 'turtle' if pid == 'turtle' else pid)
     pack = CHARACTERS / pid
     pack.mkdir(parents=True, exist_ok=True)
-    meta = {'format': 1, 'id': pid, 'name': NAMES[pid], 'author': 'dotchi', 'description': DESCRIPTIONS[pid], 'frameMs': module.FRAME_MS}
+    meta = {'format': 1, 'id': pid, 'name': NAMES[pid], 'author': 'dotchi', 'description': DESCRIPTIONS[pid], 'frameMs': module.FRAME_MS,
+            'icon': ICONS[pid]}
     (pack / 'dotchi.json').write_text(json.dumps(meta, ensure_ascii=False, indent=2) + '\n')
     pixels.save_art(pack, draw(**module.IDLE), [draw(**pose) for pose in module.POSES])
     pixels.export_pack(pack)

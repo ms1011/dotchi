@@ -150,6 +150,8 @@ export const fakeEngine = (
     notify?: UiNotifyResult
     /** $.session.usage()의 컨텍스트 토큰 수 */
     contextTokens?: number
+    /** $.session.model()의 답. 없으면 모델을 모른다(오류) */
+    model?: string
     /** /config의 행들 */
     config?: { key: string; value: unknown }[]
     /** config.set을 거절할지 */
@@ -264,6 +266,10 @@ export const fakeEngine = (
       rateLimits: [],
     },
   }))
+  on('session.model', () => {
+    if (options.model === undefined) throw new Error('no model')
+    return { value: options.model }
+  })
   on('config.list', () => ({ value: configRows.map(row => ({ key: row.key, label: row.key, value: row.value })) as unknown as ConfigRow[] }))
   on('config.set', (_, e) => {
     if (options.configDeny) return { deny: 'refused' }

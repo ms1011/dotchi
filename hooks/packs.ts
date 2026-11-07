@@ -3,7 +3,7 @@ import type { Lang, LineSet, PackLines, PackMeta } from '../types'
 export const LANGS: readonly Lang[] = ['ko', 'en', 'ja', 'zh']
 export const ID_PATTERN = /^[a-z0-9-]{1,32}$/
 /** 하위 명령 이름은 캐릭터 id로 못 쓴다 */
-export const RESERVED: readonly string[] = ['list', 'hatch', 'edit', 'install', 'export', 'remove', 'show', 'voice', 'lang', 'share', 'unshare']
+export const RESERVED: readonly string[] = ['list', 'hatch', 'edit', 'install', 'export', 'remove', 'show', 'voice', 'lang', 'share', 'unshare', 'line', 'theme']
 
 export const isLang = (value: unknown): value is Lang => LANGS.includes(value as Lang)
 export const isId = (value: unknown): value is string =>
@@ -30,6 +30,10 @@ const parseName = (value: unknown): PackMeta['name'] | null => {
   return Object.keys(names).length === 0 ? null : names
 }
 
+/** 아이콘: 공백·제어 문자 없는 1~8 코드 포인트 (이모지 하나, ZWJ 이모지 포함) */
+export const isIcon = (value: unknown): value is string =>
+  typeof value === 'string' && [...value].length >= 1 && [...value].length <= 8 && !/[\s\p{Cc}]/u.test(value)
+
 export const parseMeta = (text: string): PackMeta | null => {
   const raw = parseJson(text)
   if (!isRecord(raw) || raw.format !== 1 || !isId(raw.id)) return null
@@ -44,6 +48,8 @@ export const parseMeta = (text: string): PackMeta | null => {
     ...(typeof raw.author === 'string' ? { author: raw.author } : {}),
     ...(typeof raw.description === 'string' ? { description: raw.description } : {}),
     ...(typeof frameMs === 'number' ? { frameMs } : {}),
+    // 아이콘이 이상해도 팩은 받는다: 아이콘만 버리고 기본 발자국을 쓴다
+    ...(isIcon(raw.icon) ? { icon: raw.icon } : {}),
   }
 }
 

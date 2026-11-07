@@ -15,6 +15,7 @@ class DefaultsTest(unittest.TestCase):
         self.assertEqual(meta['id'], pid)
         self.assertEqual(sorted(meta['name']), sorted(LANGS))
         self.assertEqual(meta['frameMs'], frame_ms)
+        self.assertTrue(1 <= len(meta.get('icon', '')) <= 8, f'{pid} icon')
         art = json.loads((pack / 'art.json').read_text())
         self.assertEqual((art['width'], art['height']), (32, 32))
         self.assertTrue(3 <= len(art['work']) <= 5)

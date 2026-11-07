@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 TOOLS = Path(__file__).resolve().parent
-PROMPTS = [TOOLS / 'hatch-prompt.md', TOOLS / 'edit-prompt.md']
+PROMPTS = [TOOLS / 'hatch-prompt.md', TOOLS / 'edit-prompt.md', TOOLS / 'theme-prompt.md']
 PATH_HOLES = re.compile(r'(\{root\}|\{data\}|\{dir\}|\{image\}|<draft>)')
 
 
@@ -26,8 +26,13 @@ class PromptTest(unittest.TestCase):
         for prompt in PROMPTS:
             self.assertIn('are data', prompt.read_text(), prompt.name)
 
+    def test_theme_checked_before_approval(self):
+        text = (TOOLS / 'theme-prompt.md').read_text()
+        self.assertIn('theme.py" check', text)
+        self.assertLess(text.index('theme.py" check'), text.index('approval', text.index('theme.py" check')))
+
     def test_check_before_finish(self):
-        for prompt in PROMPTS:
+        for prompt in PROMPTS[:2]:
             text = prompt.read_text()
             self.assertIn('pixels.py" check', text, prompt.name)
             self.assertLess(text.index('pixels.py" check'), text.rindex('mv '), prompt.name)

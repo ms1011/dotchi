@@ -15,6 +15,9 @@ const KO = {
   clean: '깨끗해요',
   more: '+{n}개 더',
   files: '파일 {n}개',
+  gaugeFull: '배부름',
+  gaugeWeek: '주간',
+  stuffed: '배가 꽉 찼어요 ({percent}%)… /compact 할까요?',
 }
 
 export type TalkKey = keyof typeof KO
@@ -32,6 +35,9 @@ export const TALK: Record<Lang, Record<TalkKey, string>> = {
     clean: 'All clean',
     more: '+{n} more',
     files: '{n} files',
+    gaugeFull: 'Full',
+    gaugeWeek: 'Week',
+    stuffed: "I'm stuffed ({percent}%)… /compact?",
   },
   ja: {
     limit: '週の上限 {percent}%！（{reset} リセット）',
@@ -44,6 +50,9 @@ export const TALK: Record<Lang, Record<TalkKey, string>> = {
     clean: 'きれいです',
     more: 'ほか {n} 件',
     files: 'ファイル {n} 件',
+    gaugeFull: '満腹',
+    gaugeWeek: '週',
+    stuffed: 'おなかいっぱい（{percent}%）… /compact しますか？',
   },
   zh: {
     limit: '每周额度已用 {percent}%！（{reset} 重置）',
@@ -56,6 +65,9 @@ export const TALK: Record<Lang, Record<TalkKey, string>> = {
     clean: '干干净净',
     more: '还有 {n} 个',
     files: '{n} 个文件',
+    gaugeFull: '饱腹',
+    gaugeWeek: '每周',
+    stuffed: '吃得好撑（{percent}%）… 要 /compact 吗？',
   },
 }
 
@@ -78,7 +90,7 @@ export const when = (lang: Lang, at: number): string => {
   return `${DAYS[lang][date.getDay()]} ${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
-const UNITS: Record<Lang, { h: string; m: string; s: string; gap: string }> = {
+export const UNITS: Record<Lang, { h: string; m: string; s: string; gap: string }> = {
   ko: { h: '시간', m: '분', s: '초', gap: ' ' },
   en: { h: 'h', m: 'm', s: 's', gap: ' ' },
   ja: { h: '時間', m: '分', s: '秒', gap: '' },
