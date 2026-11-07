@@ -26,19 +26,10 @@ export const gitLines = (
   const files = orderFiles(git.files, touched)
   const room = Math.max(1, maxRows - 1)
   if (files.length <= room) return [head, ...files.map(f => fileLine(f, touched, width))]
+  // 한 줄뿐이면 '+n개 더'만 남기지 않고 파일 수를 말한다
+  if (room === 1) return [head, say(lang, 'files', { n: String(files.length) })]
   const shown = files.slice(0, Math.max(0, room - 1))
   return [head, ...shown.map(f => fileLine(f, touched, width)), say(lang, 'more', { n: String(files.length - shown.length) })]
-}
-
-/** 상태 줄 한 줄 요약. 보여 줄 게 없으면 undefined */
-export const summaryOf = (git: GitState | null, artifacts: readonly ArtifactLink[], lang: Lang): string | undefined => {
-  const parts: string[] = []
-  if (git !== null) {
-    parts.push(branchLine(git))
-    if (git.files.length > 0) parts.push(say(lang, 'files', { n: String(git.files.length) }))
-  }
-  if (artifacts.length > 0) parts.push(`🔗 ${artifacts[0]!.title}`)
-  return parts.length === 0 ? undefined : parts.join(' · ')
 }
 
 /** 같은 주소는 하나만, 최근 것이 앞 */

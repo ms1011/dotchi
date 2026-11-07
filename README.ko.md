@@ -26,6 +26,8 @@
 - 💬 **말을 해요.** 만화 말풍선, Claude가 일하는 동안 나오는 스피너 문구, 답변 끝 한마디(선택)가 있어요.
 - 🪟 **입력창 위 또는 옆 패널.** 펫을 오른쪽 패널에 두고 답변은 나머지 화면을 쓰게 할 수 있어요.
 - 👀 **대신 지켜봐 줘요.** 주간 한도가 80, 85, 90, 95, 99%를 넘을 때 알려 주고, 긴 답변이 끝나면 데스크톱 알림을 보내고, 하루 넘게 쉰 큰 대화를 이어가기 전에 미리 말해 줘요. 옆 패널에는 `git status`와 이 세션의 아티팩트가 늘 보여요.
+- 📊 **다마고치 계기판.** 상태 줄에 컨텍스트가 얼마나 찼는지 하트로 `♥♥♥♡♡ 62%`, 주간 한도를 `⚡ 41%`로, 브랜치와 커밋 안 한 `+/−` 줄 수, 세션 시간을 보여 줘요. 70%부터 펫이 배불러하고 90%가 되면 `/compact`를 권해요. 옆 패널에는 같은 내용이 파스텔 색으로 나와요.
+- 🎨 **상태 줄 테마.** 게이지 모양을 펫과 따로 골라요: 파스텔(기본), 사탕, 숲, ASCII만 쓰는 모노. Claude와 함께 내 테마를 만들고, 색이나 이모지 하나는 명령으로 바꾸고, [도찌 사이트](https://ms1011.github.io/dotchi-packs/?tab=themes)에 올려 나눌 수 있어요.
 - 📦 **팩 공유.** 캐릭터 하나가 작은 팩 하나예요. 명령 하나로 [도찌 펫 사이트](https://ms1011.github.io/dotchi-packs)에 올리거나 zip으로 내보낼 수 있어요.
 - 🌏 **대사 4개 언어.** 펫이 한국어, 영어, 일본어, 중국어(간체)로 말해요. 명령 안내 문구는 영어예요.
 - 🐿️🐢 **처음부터 여섯 마리:** 도토리를 안은 다람쥐, 알고 보니 엄청 빠른 거북이, 그리고 나라마다 한 마리씩 호랑이 🐯(한국), 시바견 🐕(일본), 판다 🐼(중국), 흰머리수리 🦅(미국)
@@ -86,11 +88,28 @@ claude plugin update dotchi
 | `/dotchi notify after <초>` | 오래 걸렸다고 보는 기준(기본 60초) |
 | `/dotchi notify fix` | 알림이 안 올 때 Claude Code의 알림 경로를 `iterm2_with_bell`로 바꿔요 |
 | `/dotchi rest <시간> <토큰>\|off` | 그만큼 쉰 뒤 그 토큰 이상인 대화에 타이핑을 시작하면 알려요(기본 24시간, 100k) |
+| `/dotchi line full\|mini\|off` | 상태 줄에 보일 것: 전부(기본), 퍼센트와 브랜치만, 끄기 |
+| `/dotchi line cost on\|off` | 상태 줄과 패널에 세션 비용($) 표시 (기본은 꺼짐: 구독이면 실제로 내는 돈이 아니에요) |
+| `/dotchi line context\|week <주의> <위험>\|reset` | 게이지가 노랑·코랄로 바뀌는 기준(%)을 바꿔요 (기본 컨텍스트 70/90, 주간 80/95). 컨텍스트의 위험 기준은 `/compact`를 권하는 때이기도 해요 |
+| `/dotchi theme [list]` | 상태 줄 테마 목록 (기본과 내 것) |
+| `/dotchi theme <테마>` | 테마 바꾸기 (id나 이름) |
+| `/dotchi theme new [아이디어]` | Claude와 테마 만들기: 분위기를 묻고 `theme.json`을 써서 검사하고 미리 보여 줘요 |
+| `/dotchi theme edit [테마]` | Claude와 테마 손보기 (빼면 지금 테마) |
+| `/dotchi theme set <칸> <값>` | 지금 테마의 한 칸만 바꾸기: `color.ok #8fd9b6`, `face.danger (×_×)`, `hearts ♥ ♡`, `bar ▰ ▱`, `symbol.week ⚡` … |
+| `/dotchi theme install <파일 또는 사이트 id>` | `theme.json` 파일이나 사이트의 테마(id 또는 링크) 설치 |
+| `/dotchi theme export <테마>` | 지금 폴더에 `<id>.theme.json`으로 저장 |
+| `/dotchi theme share <테마> [--as <id>]` | 도찌 사이트에 테마 올리기 |
+| `/dotchi theme unshare <테마>` | 사이트에서 내 테마 내리기 |
+| `/dotchi theme remove <테마>` | 내 테마 지우기 |
 | `/dotchi lang ko\|en\|ja\|zh\|auto` | 펫의 대사와 이름 언어 (`auto`는 컴퓨터 설정을 따라요) |
 
 **알림.** 승인을 기다릴 때는 Claude Code가 직접 알림을 보내고, 펫은 말풍선으로만 알려요. 긴 답변이 끝났을 때의 알림은 도찌가 보내요. 둘 다 터미널 알림이라 쓰는 터미널 앱이 보여 줘야 해요. 안 보이면 `/dotchi notify fix`를 실행하세요.
 
 **git과 아티팩트.** 옆 패널에서는 펫 아래에 브랜치, 바뀐 파일(Claude가 고친 파일은 ✎), 이 세션에서 올린 아티팩트가 나와요. 옆 패널이 아니면 상태 줄에 한 줄로 요약해요.
+
+**상태 줄.** `🌰 ♥♥♥♡♡ 62% · ⚡ 41% · ⎇ main ↑2 · 파일 3개 +120 −8 · 12분 · 🔗 보고서`. 하트는 컨텍스트가 찬 만큼이에요. 70%부터 펫이 `(•_•;)` 배불러하고, 90%가 되면 `(×_×)` 하고 `/compact`를 한 번 권해요. `⚡`는 주간 한도이고, 🥱가 붙으면 지금 속도로는 리셋 전에 바닥난다는 뜻이에요. 0이거나 모르는 값은 빼요. 이 퍼센트 기준은 `/dotchi line context`, `/dotchi line week`로 바꿀 수 있어요. 옆 패널에서는 같은 숫자가 파스텔 막대가 되고, 얼굴은 펫의 대표색을 입고, 맨 아래 줄에 세션 시간·모델·컨텍스트 크기가 나와요.
+
+**테마.** 테마는 모양만 담아요: 색 다섯 개(`ok`, `warn`, `danger`, `dim`, `accent`, accent가 `pet`이면 펫의 대표색), 얼굴 세 개, 하트·막대 글자, 기호 네 개. 퍼센트 기준은 내 설정 그대로예요. 테마는 `~/.claude/dotchi/themes/<id>/theme.json`에 있고, 적지 않은 칸은 파스텔로 채워요. 기본 테마를 고치면 같은 id의 내 복사본이 생기고, 그 복사본을 지우면 기본 테마로 돌아가요. 파일은 `python3 tools/theme.py check <파일>`로 검사하고 `python3 tools/theme.py preview <파일>`로 색까지 미리 볼 수 있어요.
 
 **옆 패널.** `/dotchi show side`를 실행하면 펫이 오른쪽 패널(너비의 약 20%)로 가요. 전체 화면 모드에서 대화 옆에 붙으니 `/tui fullscreen`을 한 번 실행하세요. 너비는 `Ctrl+X` 다음 화살표 키로 바꾸고, `Ctrl+X` 다음 `X`로 닫아요.
 
@@ -138,7 +157,7 @@ Claude가 한 번에 하나씩 물어보면서 진행해요.
 
 ```
 <팩>/
-  dotchi.json   { "format": 1, "id", "name", "author"?, "description"?, "frameMs"? }
+  dotchi.json   { "format": 1, "id", "name", "author"?, "description"?, "frameMs"?, "icon"? }
   art.json      { "width": 32, "height": 32, "idle": Frame, "work": [Frame, …] }   (컷 1~5장)
   lines.json    { "<언어>": { "spinner": [...], "idle": [...], "ending": [...] }, … }
   grid/         (선택) 고칠 수 있는 격자 텍스트
@@ -148,6 +167,7 @@ Claude가 한 번에 하나씩 물어보면서 진행해요.
 - `id`: 소문자, 숫자, `-`로 32자까지. 이미 있으면 설치할 때 `-2`, `-3`…을 붙여요.
 - `name`: 문자열 하나, 또는 언어별 이름: `{ "ko": "다람쥐", "en": "Squirrel" }`
 - `frameMs`: 한 컷의 길이, 60~1000ms (기본 250)
+- `icon`: 상태 줄 맨 앞에 서는 이모지 하나 (다람쥐는 🌰). 없으면 🐾
 - `lines.json`: `ko`, `en`, `ja`, `zh` 중 아무거나. 없는 언어는 영어, 그다음 팩의 첫 언어로 보여요.
 - `Frame`은 32줄 × 32칸이고, 한 칸은 `"rrggbb"` 또는 투명(`null`)이에요.
 - 설치하고 내보낼 때는 위 파일만 복사하고, 심볼릭 링크는 건너뛰어요. `--with-source`를 붙이지 않으면 `source/`는 내보내지 않아요.
@@ -160,6 +180,7 @@ Claude가 한 번에 하나씩 물어보면서 진행해요.
 | 경로 | 내용 |
 | :- | :- |
 | `~/.claude/dotchi/characters/` | 부화시키거나 설치한 캐릭터 |
+| `~/.claude/dotchi/themes/` | 만들거나 고치거나 설치한 상태 줄 테마 |
 | `~/.claude/dotchi/drafts/` | 부화·다듬기 중인 캐릭터 |
 | `~/.claude/dotchi/venv/` | 영상처리 도구 |
 
@@ -173,10 +194,12 @@ Claude가 한 번에 하나씩 물어보면서 진행해요.
 | `/dotchi install <id 또는 링크>` | 그 펫의 `dotchi.json`, `art.json`, `lines.json`을 `https://ms1011.github.io/dotchi-packs/packs/<id>/`에서 받아요. 이 다운로드 요청 말고는 나나 내 펫에 대한 어떤 정보도 보내지 않아요. |
 | `/dotchi share <캐릭터>` | id가 이미 쓰이는지 보려고 `https://ms1011.github.io/dotchi-packs/index.json`을 읽고, 내 GitHub 사용자 id를 알려고 `gh auth status`와 `gh api user`를 실행해요. 그다음 `gh issue create`로 [ms1011/dotchi-packs](https://github.com/ms1011/dotchi-packs)에 내 GitHub 계정으로 **공개** Issue를 열어요. Issue에는 펫 이름과 소개, 팩(`dotchi.json`, `art.json`, `lines.json`, `grid/*.txt`를 gzip으로 묶은 것)이 들어가요. 원본 그림(`source/`)은 보내지 않아요. 게시되면 사이트에 펫과 내 GitHub 아이디가 보여요. |
 | `/dotchi unshare <캐릭터>` | `gh auth status`를 실행한 뒤 ms1011/dotchi-packs에 그 펫을 내려 달라는 공개 Issue를 열어요. |
+| `/dotchi theme install <id 또는 링크>` | 그 테마의 `theme.json`을 `https://ms1011.github.io/dotchi-packs/themes/<id>/`에서 받아요. 그 밖에는 아무것도 보내지 않아요. |
+| `/dotchi theme share <테마>` / `theme unshare` | 펫 올리기와 같아요: `index.json`으로 id를 확인하고 `gh auth status`, `gh api user`를 실행한 뒤, 테마의 `theme.json`을 담은 **공개** Issue(`theme-share:` 또는 `theme-unshare:`)를 열어요. |
 
 도찌는 GitHub 토큰을 직접 읽지 않아요. `gh`가 `gh auth login`으로 해 둔 로그인을 써요. 올린 펫은 공개돼요. 직접 그렸거나 찍었거나, 공유할 권리가 있는 그림으로 만든 펫만 올려 주세요.
 
-주간 한도 경고, 알림, 쉬었다 돌아왔을 때 경고는 Claude Code가 mod에 이미 알려 주는 숫자만 쓰고, 어디로도 보내지 않아요. 옆 패널과 상태 줄을 채우려고 프로젝트 폴더에서 `git status`(읽기 전용)를 30초마다, 그리고 파일을 고친 뒤에 실행하고, 세션에서 올린 아티팩트의 제목과 링크를 mod 저장소에 기억해 둬요.
+주간 한도 경고, 알림, 쉬었다 돌아왔을 때 경고는 Claude Code가 mod에 이미 알려 주는 숫자만 쓰고, 어디로도 보내지 않아요. 옆 패널과 상태 줄을 채우려고 프로젝트 폴더에서 `git status`와 `git diff --numstat`(읽기 전용)를 30초마다, 그리고 파일을 고친 뒤에 실행하고, 세션에서 올린 아티팩트의 제목과 링크를 mod 저장소에 기억해 둬요.
 
 [도찌 펫 사이트](https://ms1011.github.io/dotchi-packs)는 브라우저에서 돌아가요. 펫은 GitHub Pages에서 받고, 펫마다 👍 수를 `api.github.com`에 물어요.
 

@@ -35,7 +35,7 @@ const parseTime = (iso: string | undefined): number | null => {
 }
 
 /** 주간 창만: 이번 주의 경과 시간과 사용률로 단순 선형 예상 */
-const forecast = (kind: string, percent: number, resetsAt: number | null, now: number): number | null => {
+export const forecast = (kind: string, percent: number, resetsAt: number | null, now: number): number | null => {
   if (kind !== 'seven_day' || resetsAt === null || percent <= 0) return null
   const start = resetsAt - WEEK
   const elapsed = now - start

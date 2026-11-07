@@ -144,6 +144,17 @@ class CheckTest(unittest.TestCase):
         for word in ('frameMs', 'id', 'ending'):
             self.assertIn(word, problems)
 
+    def test_icon(self):
+        self.meta(icon='🌰')
+        self.assertEqual(pixels.check_pack(self.pack), [])
+        for bad in ('', 'a b', 'x' * 9, 3):
+            self.meta(icon=bad)
+            self.assertTrue(any('icon' in p for p in pixels.check_pack(self.pack)), bad)
+
+    def test_line_is_reserved(self):
+        self.meta(id='line')
+        self.assertTrue(any('id' in p for p in pixels.check_pack(self.pack)))
+
     def test_too_many_frames(self):
         write_pack(self.pack, make_frame(), [make_frame()] * 6)
         self.assertTrue(any('work' in p for p in pixels.check_pack(self.pack)))

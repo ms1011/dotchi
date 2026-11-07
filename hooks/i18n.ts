@@ -16,7 +16,7 @@ export const MESSAGES = {
   status: 'Now: {name} · Shown: {show} · One-liner after answers: {voice}',
   changed: 'Done. {status}',
   usage:
-    'Usage: /dotchi [character] · list · hatch [image path] · edit <character> · install <zip, folder or site id> · export <character> [--with-source] · share <character> [--as <id>] · unshare <character> · remove <character> · show [always|working|side] · voice [on|off] · lang [ko|en|ja|zh|auto] · limit [on|off] · notify [on|off|fix|after <seconds>] · rest [<hours> <tokens>|off]',
+    'Usage: /dotchi [character] · list · hatch [image path] · edit <character> · install <zip, folder or site id> · export <character> [--with-source] · share <character> [--as <id>] · unshare <character> · remove <character> · show [always|working|side] · voice [on|off] · lang [ko|en|ja|zh|auto] · limit [on|off] · notify [on|off|fix|after <seconds>] · rest [<hours> <tokens>|off] · line [full|mini|off] · line cost [on|off] · line context|week <warn%> <danger%>|reset · theme [list|<theme>|new [idea]|edit [theme]|set <key> <value>|install <file or site id>|export|share|unshare|remove <theme>]',
   unknownCharacter: "No character '{arg}'. See /dotchi list",
   listItem: '{mark}{id} ({name}) · {origin}',
   'origin.builtin': 'built-in',
@@ -54,6 +54,24 @@ export const MESSAGES = {
   notifyFixed: 'Notifications now use {channel} (was {old})',
   notifyFixManual: "Couldn't change it here. Open /config and set Notifications to \"iTerm2 w/ Bell\"",
   cannotRemoveBuiltin: "{id} is built in and can't be removed",
+  themeHint: 'Switch with /dotchi theme <id> · make one with /dotchi theme new · tweak one part with /dotchi theme set <key> <value>',
+  unknownTheme: "No theme '{arg}'. See /dotchi theme list",
+  themeChanged: 'Theme: {name} ({id})',
+  themeNewStarted: 'Starting a new theme. Claude will ask you a few things next',
+  themeEditStarted: 'Starting to touch up the theme. Claude will ask you a few things next',
+  themeSet: 'Set {key} in {id}',
+  themeBadKey: "No key '{key}'. Keys: {keys}",
+  themeBadValue:
+    "'{value}' doesn't fit {key}. Colors are #rrggbb (accent may be pet), faces up to 12 characters, hearts and bar are two glyphs like ♥ ♡, symbols one glyph",
+  themeSaveFailed: "Couldn't save the theme",
+  'reason.badTheme': 'theme.json is broken',
+  themeInstalled: 'Installed theme {name} ({id}). Switch with /dotchi theme {id}',
+  themeInstalledRenamed: "You already have a theme called '{wanted}', so this one was installed as {id}. Switch with /dotchi theme {id}",
+  themeAlreadyHave: 'You already have theme {name} ({id}). Switch with /dotchi theme {id}',
+  themeNotOnSite: "No theme called '{id}' on the dotchi site",
+  themeAsExists: "You already have a theme called '{id}'",
+  themeIdTaken: "'{id}' is already taken by another theme on the dotchi site. Try /dotchi theme share {target} --as {suggestion}",
+  themeShared: 'Sent theme {name} ({id}) to the dotchi site. The check posts its result there in a minute: {issue}\nPage: {page}',
 }
 
 export type MessageKey = keyof typeof MESSAGES

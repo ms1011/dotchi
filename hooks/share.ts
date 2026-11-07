@@ -67,3 +67,56 @@ export const takenOf = (indexJson: string): Record<string, number> | null => {
 
 /** 사이트와 내 컴퓨터 어디에도 없는 비슷한 id */
 export const suggestId = (id: string, taken: ReadonlySet<string>): string => uniqueId(id, taken)
+
+/* ---------- 상태 줄 테마: 펫과 따로 등록하고, 같은 사이트의 테마 탭에 나온다 ---------- */
+
+/** 테마 Issue 본문의 표식과 묶음 블록 */
+export const MARK_THEME_SHARE = '<!-- dotchi-theme-share v1 -->'
+export const MARK_THEME_UNSHARE = '<!-- dotchi-theme-unshare v1 -->'
+export const THEME_FENCE = 'dotchi-theme'
+
+/** 사이트에서 테마 하나를 여는 주소 */
+export const themePage = (id: string): string => `${SITE}/?theme=${id}`
+
+/** theme install 인자를 사이트의 테마 id로: 사이트 주소(?theme=<id> 또는 /themes/<id>/)거나 id 모양일 때만 */
+export const remoteThemeIdOf = (raw: string, isThemeId: (id: string) => boolean): string | null => {
+  const text = raw.trim()
+  if (/^https?:\/\//i.test(text)) {
+    let url: URL
+    try {
+      url = new URL(text)
+    } catch {
+      return null
+    }
+    const site = new URL(SITE)
+    if (url.origin !== site.origin || !`${url.pathname}/`.startsWith(`${site.pathname}/`)) return null
+    const rest = url.pathname.slice(site.pathname.length)
+    const fromPath = /^\/themes\/([^/]+)\/?(?:theme\.json)?$/.exec(rest)?.[1]
+    const id = url.searchParams.get('theme') ?? fromPath ?? null
+    return id !== null && isThemeId(id) ? id : null
+  }
+  return isThemeId(text) ? text : null
+}
+
+/** 테마 올리기 Issue 본문: 표식, 이름과 소개, 접은 칸 안의 theme.json (UTF-8 base64) */
+export const themeShareBody = (input: { id: string; name: string; description: string | undefined; json: string }): string =>
+  [
+    MARK_THEME_SHARE,
+    `**${plain(input.name)}** (\`${input.id}\`)`,
+    ...(input.description === undefined || plain(input.description) === '' ? [] : [plain(input.description)]),
+    `<details><summary>theme</summary>\n\n\`\`\`${THEME_FENCE}\n${new TextEncoder().encode(input.json).toBase64()}\n\`\`\`\n</details>`,
+  ].join('\n\n')
+
+/** 테마 내리기 Issue 본문 */
+export const themeUnshareBody = (id: string): string => `${MARK_THEME_UNSHARE}\n\nPlease take down the theme \`${id}\`.`
+
+/** 사이트 index.json의 takenThemes (테마 id → 주인의 GitHub 숫자 id). 없거나 모양이 틀리면 null */
+export const takenThemesOf = (indexJson: string): Record<string, number> | null => {
+  try {
+    const taken = (JSON.parse(indexJson) as { takenThemes?: unknown }).takenThemes
+    if (typeof taken !== 'object' || taken === null || Array.isArray(taken)) return null
+    return Object.fromEntries(Object.entries(taken).filter((entry): entry is [string, number] => typeof entry[1] === 'number'))
+  } catch {
+    return null
+  }
+}

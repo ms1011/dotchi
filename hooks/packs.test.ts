@@ -45,3 +45,17 @@ test('frameMsOf 기본 250, ticksPerLine은 3초', () => {
   expect(ticksPerLine(120)).toBe(25)
   expect(ticksPerLine(1000)).toBe(3)
 })
+
+test('icon: 이모지 하나면 받고, 이상하면 아이콘만 버린다', () => {
+  expect(parseMeta(meta({ icon: '🌰' }))?.icon).toBe('🌰')
+  expect(parseMeta(meta({ icon: '👩‍💻' }))?.icon).toBe('👩‍💻')
+  for (const bad of ['', 'a b', 'x'.repeat(9), '\n', 3]) {
+    const parsed = parseMeta(meta({ icon: bad }))
+    expect(parsed?.id).toBe('squirrel')
+    expect(parsed !== null && 'icon' in parsed).toBe(false)
+  }
+})
+
+test('line은 하위 명령이라 캐릭터 id로 못 쓴다', () => {
+  expect(parseMeta(meta({ id: 'line' }))).toBe(null)
+})

@@ -1,4 +1,6 @@
-import type { Lang, RestRule, Settings, ShowMode } from '../types'
+import type { Gauge, Lang, LineMode, RestRule, Settings, ShowMode, Threshold } from '../types'
+import { DEFAULT_GAUGE } from './meter'
+import { DEFAULT_THEME_ID, isThemeId } from './theme'
 import { isId, isLang } from './packs'
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -10,10 +12,30 @@ export const DEFAULT_SETTINGS: Settings = {
   notify: true,
   notifyAfterSec: 60,
   rest: { hours: 24, tokens: 100000 },
+  line: 'full',
+  cost: false,
+  gauge: DEFAULT_GAUGE,
+  theme: DEFAULT_THEME_ID,
 }
 
 const isInt = (value: unknown, min: number, max: number): value is number =>
   typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max
+
+/** 게이지 기준: 1~100 정수, 주의가 위험보다 낮다 */
+const isThreshold = (value: unknown): value is Threshold => {
+  if (typeof value !== 'object' || value === null) return false
+  const { warn, danger } = value as Record<string, unknown>
+  return isInt(warn, 1, 100) && isInt(danger, 1, 100) && warn < danger
+}
+
+/** 저장된 기준: 망가진 쪽만 기본값으로 */
+const normalizeGauge = (value: unknown): Gauge => {
+  const raw = typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {}
+  return {
+    context: isThreshold(raw.context) ? { warn: raw.context.warn, danger: raw.context.danger } : DEFAULT_GAUGE.context,
+    week: isThreshold(raw.week) ? { warn: raw.week.warn, danger: raw.week.danger } : DEFAULT_GAUGE.week,
+  }
+}
 
 const isSeconds = (value: unknown): value is number => isInt(value, 5, 3600)
 
@@ -33,6 +55,7 @@ export const parseTokens = (raw: string): number | null => {
 }
 
 const isShow = (value: unknown): value is ShowMode => value === 'always' || value === 'working' || value === 'side'
+const isLine = (value: unknown): value is LineMode => value === 'full' || value === 'mini' || value === 'off'
 
 export const normalizeSettings = (raw: unknown): Settings => {
   const value = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {}
@@ -45,6 +68,10 @@ export const normalizeSettings = (raw: unknown): Settings => {
     notify: typeof value.notify === 'boolean' ? value.notify : DEFAULT_SETTINGS.notify,
     notifyAfterSec: isSeconds(value.notifyAfterSec) ? value.notifyAfterSec : DEFAULT_SETTINGS.notifyAfterSec,
     rest: value.rest === null ? null : isRest(value.rest) ? { ...value.rest } : DEFAULT_SETTINGS.rest,
+    line: isLine(value.line) ? value.line : DEFAULT_SETTINGS.line,
+    cost: typeof value.cost === 'boolean' ? value.cost : DEFAULT_SETTINGS.cost,
+    gauge: normalizeGauge(value.gauge),
+    theme: isThemeId(value.theme) ? value.theme : DEFAULT_SETTINGS.theme,
   }
 }
 
@@ -67,6 +94,19 @@ export type DotchiCommand =
   | { kind: 'notifyFix' }
   | { kind: 'notifyAfter'; seconds: number }
   | { kind: 'rest'; rest: RestRule | null }
+  | { kind: 'line'; mode: LineMode }
+  | { kind: 'lineCost'; on: boolean }
+  | { kind: 'gauge'; target: keyof Gauge; at: Threshold }
+  | { kind: 'themeList' }
+  | { kind: 'themeSwitch'; target: string }
+  | { kind: 'themeNew'; idea: string | null }
+  | { kind: 'themeEdit'; target: string | null }
+  | { kind: 'themeSet'; key: string; value: string }
+  | { kind: 'themeInstall'; path: string; raw: string }
+  | { kind: 'themeExport'; target: string }
+  | { kind: 'themeShare'; target: string; as: string | null }
+  | { kind: 'themeUnshare'; target: string }
+  | { kind: 'themeRemove'; target: string }
   | { kind: 'usage' }
 
 /** 경로 인자: 감싼 따옴표를 벗기고 앞의 ~를 홈 폴더로 */
@@ -75,6 +115,38 @@ const toPath = (raw: string, home: string): string => {
   // 터미널에 파일을 끌어다 놓으면 공백 등이 역슬래시로 이스케이프된다 (따옴표로 감싼 경로는 그대로)
   const path = quoted ? quoted[2]! : raw.replace(/\\(.)/g, '$1')
   return path === '~' || path.startsWith('~/') ? `${home}${path.slice(1)}` : path
+}
+
+/** /dotchi theme … : 테마 고르기·만들기·고치기·설치·공유 */
+const parseThemeCommand = (trimmed: string, rest: string[], home: string): DotchiCommand => {
+  const [sub, ...args] = rest
+  // 하위 명령 뒤 전체: 공백이 든 얼굴·경로·설명을 그대로 받으려고 (하위 명령은 theme 바로 다음 낱말)
+  const after = (word: string) => {
+    const at = trimmed.indexOf(word, 'theme'.length)
+    return at < 0 ? '' : trimmed.slice(at + word.length).trim()
+  }
+  if (sub === undefined || (sub === 'list' && args.length === 0)) return { kind: 'themeList' }
+  if (sub === 'new') return { kind: 'themeNew', idea: after('new') || null }
+  if (sub === 'edit') return args.length <= 1 ? { kind: 'themeEdit', target: args[0] ?? null } : { kind: 'usage' }
+  if (sub === 'set') {
+    const key = args[0]
+    const value = key === undefined ? '' : after('set').slice(key.length).trim()
+    return key !== undefined && value !== '' ? { kind: 'themeSet', key, value } : { kind: 'usage' }
+  }
+  if (sub === 'install') {
+    const raw = after('install')
+    return raw === '' ? { kind: 'usage' } : { kind: 'themeInstall', path: toPath(raw, home), raw }
+  }
+  if (sub === 'export' || sub === 'unshare' || sub === 'remove') {
+    if (args.length !== 1) return { kind: 'usage' }
+    const kind = sub === 'export' ? 'themeExport' : sub === 'unshare' ? 'themeUnshare' : 'themeRemove'
+    return { kind, target: args[0]! }
+  }
+  if (sub === 'share') {
+    if (args.length === 1) return { kind: 'themeShare', target: args[0]!, as: null }
+    return args.length === 3 && args[1] === '--as' ? { kind: 'themeShare', target: args[0]!, as: args[2]! } : { kind: 'usage' }
+  }
+  return args.length === 0 ? { kind: 'themeSwitch', target: sub } : { kind: 'usage' }
 }
 
 /** /dotchi 뒤의 글자를 하위 명령으로. home은 경로의 ~를 풀 때 쓴다 */
@@ -127,6 +199,18 @@ export const parseDotchi = (args: string, home = ''): DotchiCommand => {
     if (rest.length !== 2) return { kind: 'usage' }
     const rule = { hours: /^\d+$/.test(second!) ? Number(second) : NaN, tokens: parseTokens(rest[1]!) }
     return isRest(rule) ? { kind: 'rest', rest: rule } : { kind: 'usage' }
+  }
+  if (first === 'theme') return parseThemeCommand(trimmed, rest, home)
+  if (first === 'line') {
+    if (rest.length === 1 && isLine(second)) return { kind: 'line', mode: second }
+    if (rest.length === 2 && second === 'cost' && (rest[1] === 'on' || rest[1] === 'off')) return { kind: 'lineCost', on: rest[1] === 'on' }
+    if (second === 'context' || second === 'week') {
+      if (rest.length === 2 && rest[1] === 'reset') return { kind: 'gauge', target: second, at: DEFAULT_GAUGE[second] }
+      const [warn, danger] = rest.slice(1).map(n => (/^\d+$/.test(n) ? Number(n) : NaN))
+      const at = { warn, danger }
+      return rest.length === 3 && isThreshold(at) ? { kind: 'gauge', target: second, at } : { kind: 'usage' }
+    }
+    return { kind: 'usage' }
   }
   if (first === 'lang') {
     if (rest.length !== 1) return { kind: 'usage' }

@@ -214,7 +214,7 @@ def gif_pack(pack):
 
 
 LANGS = ('ko', 'en', 'ja', 'zh')
-RESERVED = {'list', 'hatch', 'edit', 'install', 'export', 'remove', 'show', 'voice', 'lang'}
+RESERVED = {'list', 'hatch', 'edit', 'install', 'export', 'remove', 'show', 'voice', 'lang', 'share', 'unshare', 'line', 'theme'}
 ID = __import__('re').compile(r'^[a-z0-9-]{1,32}$')
 HEX = __import__('re').compile(r'^[0-9a-f]{6}$')
 
@@ -250,6 +250,9 @@ def check_pack(pack):
         frame_ms = meta.get('frameMs')
         if frame_ms is not None and not (isinstance(frame_ms, (int, float)) and not isinstance(frame_ms, bool) and 60 <= frame_ms <= 1000):
             problems.append('dotchi.json: frameMs must be 60-1000')
+        icon = meta.get('icon')
+        if icon is not None and not (isinstance(icon, str) and 1 <= len(icon) <= 8 and not any(c.isspace() or ord(c) < 32 for c in icon)):
+            problems.append('dotchi.json: icon must be one emoji (1-8 characters, no spaces)')
     elif meta is not None:
         problems.append('dotchi.json: must be an object')
     art = _load(pack / 'art.json', problems)
