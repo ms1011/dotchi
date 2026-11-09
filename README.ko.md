@@ -96,7 +96,7 @@ claude plugin update dotchi
 | `/dotchi theme <테마>` | 테마 바꾸기 (id나 이름) |
 | `/dotchi theme new [아이디어]` | Claude와 테마 만들기: 분위기를 묻고 `theme.json`을 써서 검사하고 미리 보여 줘요 |
 | `/dotchi theme edit [테마]` | Claude와 테마 손보기 (빼면 지금 테마) |
-| `/dotchi theme set <칸> <값>` | 지금 테마의 한 칸만 바꾸기: `color.ok #8fd9b6`, `face.danger (×_×)`, `hearts ♥ ♡`, `bar ▰ ▱`, `symbol.week ⚡` … |
+| `/dotchi theme set <칸> <값>` | 지금 테마의 한 칸만 바꾸기: `color.ok #8fd9b6`, `hearts ♥ ♡`, `bar ▰ ▱`, `symbol.week ⚡` … |
 | `/dotchi theme install <파일 또는 사이트 id>` | `theme.json` 파일이나 사이트의 테마(id 또는 링크) 설치 |
 | `/dotchi theme export <테마>` | 지금 폴더에 `<id>.theme.json`으로 저장 |
 | `/dotchi theme share <테마> [--as <id>]` | 도찌 사이트에 테마 올리기 |
@@ -113,9 +113,9 @@ claude plugin update dotchi
 
 **git과 아티팩트.** 옆 패널에서는 펫 아래에 브랜치, 바뀐 파일(Claude가 고친 파일은 ✎), 이 세션에서 올린 아티팩트가 나와요. 옆 패널이 아니면 상태 줄에 한 줄로 요약해요.
 
-**상태 줄.** `🌰 ♥♥♥♡♡ 62% · ⚡ 41% · ⎇ main ↑2 · 파일 3개 +120 −8 · 12분 · 🔗 보고서`. 하트는 세션(컨텍스트)이 찬 만큼이에요. 70%부터 노란색, 90%부터 코랄색이 되고, 상태 줄에 `/compact`가 붙으며 펫이 한 번 권해요. 사탕 같은 테마는 여기에 `(•_•;)` 같은 얼굴을 붙여요. `⚡`는 주간 한도이고, 🥱가 붙으면 지금 속도로는 리셋 전에 바닥난다는 뜻이에요. 0이거나 모르는 값은 빼요. 이 퍼센트 기준은 `/dotchi line context`, `/dotchi line week`로 바꿀 수 있어요. 옆 패널에서는 같은 숫자가 파스텔 막대가 되고, 얼굴은 펫의 대표색을 입고, 맨 아래 줄에 세션 시간·모델·컨텍스트 크기가 나와요.
+**상태 줄.** `🌰 ♥♥♥♡♡ 62% · ⚡ 41% · ⎇ main ↑2 · 파일 3개 +120 −8 · 12분 · 🔗 보고서`. 하트는 세션(컨텍스트)이 찬 만큼이에요. 70%부터 노란색, 90%부터 코랄색이 되고, 상태 줄에 `/compact`가 붙으며 펫이 한 번 권해요. `⚡`는 주간 한도이고, 🥱가 붙으면 지금 속도로는 리셋 전에 바닥난다는 뜻이에요. 0이거나 모르는 값은 빼요. 이 퍼센트 기준은 `/dotchi line context`, `/dotchi line week`로 바꿀 수 있어요. 옆 패널에서는 같은 숫자가 파스텔 막대가 되고, 앞의 하트는 펫의 대표색을 입고, 맨 아래 줄에 세션 시간·모델·컨텍스트 크기가 나와요.
 
-**테마.** 테마는 모양만 담아요: 색 다섯 개(`ok`, `warn`, `danger`, `dim`, `accent`, accent가 `pet`이면 펫의 대표색), 얼굴 세 개, 하트·막대 글자, 기호 네 개. 퍼센트 기준은 내 설정 그대로예요. 테마는 `~/.claude/dotchi/themes/<id>/theme.json`에 있고, 적지 않은 칸은 파스텔로 채워요. 기본 테마를 고치면 같은 id의 내 복사본이 생기고, 그 복사본을 지우면 기본 테마로 돌아가요. 파일은 `python3 tools/theme.py check <파일>`로 검사하고 `python3 tools/theme.py preview <파일>`로 색까지 미리 볼 수 있어요.
+**테마.** 테마는 모양만 담아요: 색 다섯 개(`ok`, `warn`, `danger`, `dim`, `accent`, accent가 `pet`이면 펫의 대표색), 얼굴 세 개(선택, 기본 테마에는 없음), 하트·막대 글자, 기호 네 개. 퍼센트 기준은 내 설정 그대로예요. 테마는 `~/.claude/dotchi/themes/<id>/theme.json`에 있고, 적지 않은 칸은 파스텔로 채워요. 기본 테마를 고치면 같은 id의 내 복사본이 생기고, 그 복사본을 지우면 기본 테마로 돌아가요. 파일은 `python3 tools/theme.py check <파일>`로 검사하고 `python3 tools/theme.py preview <파일>`로 색까지 미리 볼 수 있어요.
 
 **옆 패널.** `/dotchi show side`를 실행하면 펫이 오른쪽 패널(너비의 약 20%)로 가요. 전체 화면 모드에서 대화 옆에 붙으니 `/tui fullscreen`을 한 번 실행하세요. 너비는 `Ctrl+X` 다음 화살표 키로 바꾸고, `Ctrl+X` 다음 `X`로 닫아요.
 

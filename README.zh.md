@@ -27,7 +27,7 @@ dotchi 是 [Claude Code](https://docs.claude.com/en/docs/claude-code) 的一个 
 - 🪟 **输入框上方或侧边面板。** 可以把宠物放在右侧面板，回答使用其余的屏幕空间。
 - 👀 **替你盯着。** 每周额度超过 80、85、90、95、99% 时提醒，较长的回答结束时发桌面通知，在你继续一个闲置超过一天的大对话之前先告诉你。侧边面板里始终显示 `git status` 和本次会话的 artifact。
 - 📊 **电子宠物式仪表。** 状态栏用爱心 `♥♥♥♡♡ 62%` 显示上下文的占用，用 `⚡ 41%` 显示每周额度，还有分支、未提交的 `+/−` 行数和会话时长。到 70% 宠物会开始担心，到 90% 会建议 `/compact`。侧边面板用粉彩色显示同样的内容。
-- 🎨 **状态栏主题。** 仪表的外观与宠物分开选择：粉彩（默认）、糖果、森林、只用 ASCII 的单色，以及没有宠物元素的现代、绿屏经典和彩虹。可以和 Claude 一起做自己的主题，用命令改一个颜色或表情，并在 [dotchi 网站](https://ms1011.github.io/dotchi-packs/?tab=themes)分享。
+- 🎨 **状态栏主题。** 仪表的外观与宠物分开选择：粉彩（默认）、糖果、森林、只用 ASCII 的单色，以及没有宠物元素的现代、绿屏经典和彩虹。可以和 Claude 一起做自己的主题，用命令改一个颜色或符号，并在 [dotchi 网站](https://ms1011.github.io/dotchi-packs/?tab=themes)分享。
 - 📦 **分享角色包。** 每个角色就是一个小角色包。一条命令就能发布到 [dotchi 宠物网站](https://ms1011.github.io/dotchi-packs)，也可以导出成 zip。
 - 🌏 **台词支持四种语言。** 宠物可以用韩语、英语、日语或简体中文说话。命令提示为英语。
 - 🌱 **一周里慢慢长大。** 每周额度用得越多，宠物就会长到 3 个阶段（33% 起第 2 阶段，66% 起第 3 阶段），额度重置时回到第 1 阶段，上周的宠物会留在相册里。没有每周额度的账号按和 Claude 一起工作的天数（2 天第 2 阶段，4 天第 3 阶段）或自己设定的美元预算成长。离开一天以上再回来时它会迎接你，按 ♥（宠物有焦点时按 `p`）可以摸摸它。每只内置宠物都有自己的第 2、3 阶段造型，新孵化的宠物也会在孵化时一起设计。
@@ -96,7 +96,7 @@ claude plugin update dotchi
 | `/dotchi theme <主题>` | 切换主题（id 或名字） |
 | `/dotchi theme new [想法]` | 和 Claude 一起做主题：询问风格，写好 `theme.json`，检查并预览 |
 | `/dotchi theme edit [主题]` | 和 Claude 一起修改主题（省略则为当前主题） |
-| `/dotchi theme set <项> <值>` | 只改当前主题的一项：`color.ok #8fd9b6`、`face.danger (×_×)`、`hearts ♥ ♡`、`bar ▰ ▱`、`symbol.week ⚡` … |
+| `/dotchi theme set <项> <值>` | 只改当前主题的一项：`color.ok #8fd9b6`、`hearts ♥ ♡`、`bar ▰ ▱`、`symbol.week ⚡` … |
 | `/dotchi theme install <文件或网站 id>` | 安装 `theme.json` 文件，或网站上的主题（id 或链接） |
 | `/dotchi theme export <主题>` | 在当前文件夹保存为 `<id>.theme.json` |
 | `/dotchi theme share <主题> [--as <id>]` | 把主题分享到 dotchi 网站 |
@@ -113,9 +113,9 @@ claude plugin update dotchi
 
 **git 与 artifact。** 在侧边面板里，宠物下方会显示分支、改动的文件（Claude 编辑过的带 ✎）和本次会话发布的 artifact。没有面板时，状态栏会显示一行摘要。
 
-**状态栏。** `🌰 ♥♥♥♡♡ 62% · ⚡ 41% · ⎇ main ↑2 · 3 个文件 +120 −8 · 12分 · 🔗 报告`。爱心表示上下文占用：从 70% 起变黄，到 90% 变成珊瑚色，状态栏会加上 `/compact`，宠物也会提醒一次。糖果等主题会在这里加上 `(•_•;)` 这样的表情。`⚡` 是每周额度，🥱 表示照这个速度会在重置前用完。为 0 或未知的值不显示。这些百分比可以用 `/dotchi line context` 和 `/dotchi line week` 修改。在侧边面板里，同样的数字变成粉彩色进度条，表情用宠物的代表色，最后一行显示会话时长、模型和上下文大小。
+**状态栏。** `🌰 ♥♥♥♡♡ 62% · ⚡ 41% · ⎇ main ↑2 · 3 个文件 +120 −8 · 12分 · 🔗 报告`。爱心表示上下文占用：从 70% 起变黄，到 90% 变成珊瑚色，状态栏会加上 `/compact`，宠物也会提醒一次。`⚡` 是每周额度，🥱 表示照这个速度会在重置前用完。为 0 或未知的值不显示。这些百分比可以用 `/dotchi line context` 和 `/dotchi line week` 修改。在侧边面板里，同样的数字变成粉彩色进度条，前面的爱心用宠物的代表色，最后一行显示会话时长、模型和上下文大小。
 
-**主题。** 主题只包含外观：五种颜色（`ok`、`warn`、`danger`、`dim`、`accent`，accent 为 `pet` 时使用宠物的代表色）、三个表情、爱心和进度条字符、四个符号。百分比设置仍是你自己的。主题保存在 `~/.claude/dotchi/themes/<id>/theme.json`，没写的项用粉彩补上。修改内置主题会生成同 id 的个人副本，删除副本即恢复内置主题。可以用 `python3 tools/theme.py check <文件>` 检查，用 `python3 tools/theme.py preview <文件>` 带颜色预览。
+**主题。** 主题只包含外观：五种颜色（`ok`、`warn`、`danger`、`dim`、`accent`，accent 为 `pet` 时使用宠物的代表色）、三个表情（可选，内置主题都不用）、爱心和进度条字符、四个符号。百分比设置仍是你自己的。主题保存在 `~/.claude/dotchi/themes/<id>/theme.json`，没写的项用粉彩补上。修改内置主题会生成同 id 的个人副本，删除副本即恢复内置主题。可以用 `python3 tools/theme.py check <文件>` 检查，用 `python3 tools/theme.py preview <文件>` 带颜色预览。
 
 **侧边面板。** `/dotchi show side` 会把宠物放到右侧面板（约占宽度 20%）。面板在全屏模式下会停靠在对话旁边，所以请先运行一次 `/tui fullscreen`。用 `Ctrl+X` 加方向键调整宽度，用 `Ctrl+X` 加 `X` 关闭。
 

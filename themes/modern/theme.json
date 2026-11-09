@@ -8,7 +8,7 @@
     "zh": "现代"
   },
   "author": "dotchi",
-  "description": "Clean shapes and calm colors, no faces or emoji.",
+  "description": "Clean shapes and calm colors, no emoji.",
   "colors": {
     "ok": "#7dd3fc",
     "warn": "#fbbf24",
@@ -17,9 +17,9 @@
     "accent": "#a78bfa"
   },
   "faces": {
-    "ok": "●",
-    "warn": "▲",
-    "danger": "■"
+    "ok": "",
+    "warn": "",
+    "danger": ""
   },
   "hearts": [
     "▮",

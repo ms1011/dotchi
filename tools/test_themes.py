@@ -24,7 +24,7 @@ class BuiltinThemesTest(unittest.TestCase):
             self.assertEqual(sorted(theme['name']), sorted(tool.LANGS))
 
     def test_plain_themes_have_no_faces(self):
-        for tid in ('pastel', 'forest', 'mono'):
+        for tid in ('candy', 'classic', 'forest', 'modern', 'mono', 'pastel', 'rainbow'):
             self.assertEqual(self.load(tid)['faces'], {'ok': '', 'warn': '', 'danger': ''}, tid)
 
     def test_pastel_is_the_default_look(self):
