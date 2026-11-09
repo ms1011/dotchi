@@ -71,7 +71,7 @@ test('측정값이 오면 상태 줄에 아이콘, 배부름, 주간', async ($,
   await $.session.start(SESSION)
   await clock.settle()
   await $.session.measure(measure(62, 41))
-  expect(statuses.at(-1)).toBe('🌰 ♥♥♥♡♡ 62% · ⚡ 41%')
+  expect(statuses.at(-1)).toBe('🌰 ★★☆ · ♥♥♥♡♡ 62% · ⚡ 41%')
 })
 
 test('git의 바뀐 줄 수와 지난 시간도 상태 줄에', async ($, on) => {
@@ -80,7 +80,7 @@ test('git의 바뀐 줄 수와 지난 시간도 상태 줄에', async ($, on) =>
   await $.session.start(SESSION)
   await clock.settle()
   await clock.advance(12 * 60000)
-  expect(statuses.at(-1)).toBe('🌰 ⎇ main · 파일 1개 +12 −3 · 12분')
+  expect(statuses.at(-1)).toBe('🌰 ★☆☆ · ⎇ main · 파일 1개 +12 −3 · 12분')
 })
 
 test('컨텍스트 90%를 넘으면 한 번만 말하고, /compact로 내려간 뒤 다시 넘으면 또', async ($, on) => {
@@ -112,10 +112,10 @@ test('/dotchi line: mini, 비용, off', async ($, on) => {
   await $.session.start(SESSION)
   await $.session.measure(measure(62, 41))
   expect((await dotchi($, 'line mini')).text).toContain('Done.')
-  expect(statuses.at(-1)).toBe('🌰 62% · ⚡ 41%')
+  expect(statuses.at(-1)).toBe('🌰 ★★☆ · 62% · ⚡ 41%')
   await dotchi($, 'line full')
   await dotchi($, 'line cost on')
-  expect(statuses.at(-1)).toBe('🌰 ♥♥♥♡♡ 62% · ⚡ 41% · $1.50')
+  expect(statuses.at(-1)).toBe('🌰 ★★☆ · ♥♥♥♡♡ 62% · ⚡ 41% · $1.50')
   await dotchi($, 'line off')
   expect(statuses.at(-1)).toBe(undefined)
   const { text } = await dotchi($, '')
@@ -165,7 +165,7 @@ test('/dotchi line context: 바꾼 기준으로 말풍선과 상태 줄', async 
   await $.session.start(SESSION)
   expect((await dotchi($, 'line context 50 80')).text).toContain('Done.')
   await $.session.measure(measure(62, 41))
-  expect(statuses.at(-1)).toBe('🌰 ♥♥♥♡♡ 62% (•_•;) · ⚡ 41%')
+  expect(statuses.at(-1)).toBe('🌰 ★★☆ · ♥♥♥♡♡ 62% (•_•;) · ⚡ 41%')
   expect(await bandText($)).not.toContain('배가 꽉')
   await $.session.measure(measure(81))
   expect(await bandText($)).toContain('배가 꽉 찼어요 (81%)')

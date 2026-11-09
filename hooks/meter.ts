@@ -114,7 +114,12 @@ export type StatusInput = {
   gauge?: Gauge
   /** 없으면 기본 모양(파스텔) */
   look?: Look
+  /** 진화 단계. 있으면 아이콘 바로 뒤에 별 */
+  stage?: 1 | 2 | 3
 }
+
+/** 진화 단계 별: ★☆☆ ★★☆ ★★★ */
+export const stars = (stage: 1 | 2 | 3): string => '★'.repeat(stage) + '☆'.repeat(3 - stage)
 
 /**
  * 상태 줄 한 줄: 🌰 ♥♥♥♡♡ 62% · ⚡ 41% · ⎇ main ↑2 · 파일 3개 +120 −8 · 12분 · 🔗 제목.
@@ -156,7 +161,8 @@ export const statusLine = (input: StatusInput): string | undefined => {
     const latest = input.artifacts[0]
     if (latest !== undefined) parts.push(`🔗 ${latest.title}`)
   }
-  return parts.length === 0 ? undefined : `${input.icon} ${parts.join(' · ')}`
+  if (parts.length === 0) return undefined
+  return `${input.icon} ${[...(input.stage === undefined ? [] : [stars(input.stage)]), ...parts].join(' · ')}`
 }
 
 export type CardRow = { kind: 'context' | 'week'; lead: string; label: string; bar: string; percent: string; level: Level; tail: string }

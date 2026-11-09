@@ -90,7 +90,7 @@ test('테마를 바꾸면 상태 줄의 하트·기호와 패널 색이 그 테�
   expect((stored.settings as { theme: string }).theme).toBe('candy')
   await $.session.measure(measure(62))
   await clock.settle()
-  expect(statuses.at(-1)).toBe('🐾 💗💗💗🤍🤍 62% · 🍭 41%')
+  expect(statuses.at(-1)).toBe('🐾 ★★☆ · 💗💗💗🤍🤍 62% · 🍭 41%')
 
   await runCommand($, 'dotchi', 'show side', 237)
   const texts = await paneTexts($)
@@ -115,7 +115,7 @@ test('theme set: 기본 테마는 내 폴더에 같은 id로 복사해서 한 �
   expect(saved.colors).toBe(undefined)
   expect(files['themes/pastel/theme.json']).toBe(THEMES['themes/pastel/theme.json'])
   await $.session.measure(measure(62))
-  expect(statuses.at(-1)).toBe('🐾 🍬🍬🍬·· 62% · ⚡ 41%')
+  expect(statuses.at(-1)).toBe('🐾 ★★☆ · 🍬🍬🍬·· 62% · ⚡ 41%')
   expect((await dotchi($, 'theme list')).text).toContain('▶ pastel (파스텔) · mine')
 })
 

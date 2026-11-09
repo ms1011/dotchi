@@ -119,6 +119,8 @@ declare module 'claude-code' {
       minute: number
       /** 지금 보여 줄 진화 단계 */
       stage: 1 | 2 | 3
+      /** 쓰다듬은 하트를 이 시각(ms)까지 보인다. 0이면 없음 */
+      petted: number
     }
   }
 }
