@@ -5,7 +5,8 @@ import unittest
 from pathlib import Path
 
 TOOLS = Path(__file__).resolve().parent
-PROMPTS = [TOOLS / 'hatch-prompt.md', TOOLS / 'edit-prompt.md', TOOLS / 'theme-prompt.md']
+PROMPTS = [TOOLS / 'hatch-prompt.md', TOOLS / 'edit-prompt.md', TOOLS / 'theme-prompt.md', TOOLS / 'evolve-prompt.md']
+PACK_PROMPTS = [TOOLS / 'hatch-prompt.md', TOOLS / 'edit-prompt.md', TOOLS / 'evolve-prompt.md']
 PATH_HOLES = re.compile(r'(\{root\}|\{data\}|\{dir\}|\{image\}|<draft>)')
 
 
@@ -32,7 +33,7 @@ class PromptTest(unittest.TestCase):
         self.assertLess(text.index('theme.py" check'), text.index('approval', text.index('theme.py" check')))
 
     def test_check_before_finish(self):
-        for prompt in PROMPTS[:2]:
+        for prompt in PACK_PROMPTS:
             text = prompt.read_text()
             self.assertIn('pixels.py" check', text, prompt.name)
             self.assertLess(text.index('pixels.py" check'), text.rindex('mv '), prompt.name)
@@ -48,3 +49,17 @@ class PromptTest(unittest.TestCase):
         for pet in ('squirrel', 'turtle'):
             meta = json.loads((TOOLS.parent / 'characters' / pet / 'dotchi.json').read_text())
             self.assertTrue(0 < len(meta.get('description', '')) <= 300, pet)
+
+    def test_hatch_designs_three_stages(self):
+        hatch = (TOOLS / 'hatch-prompt.md').read_text()
+        self.assertIn('pixels.py" stage', hatch)
+        self.assertIn('grow album evolve', hatch)
+
+    def test_evolve_uses_overlays_and_approval(self):
+        text = (TOOLS / 'evolve-prompt.md').read_text()
+        self.assertIn('pixels.py" stage', text)
+        self.assertIn('approval', text)
+        self.assertLess(text.index('pixels.py" stage'), text.index('pixels.py" check'))
+
+    def test_edit_mentions_stages(self):
+        self.assertIn('s2-', (TOOLS / 'edit-prompt.md').read_text())
