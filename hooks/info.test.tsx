@@ -111,11 +111,11 @@ test('패널이 없을 때는 상태 줄에 요약, 패널을 열면 지운다',
   await $.session.start(SESSION)
   await clock.settle()
   await $.tool.call({ tool: 'Artifact', file_path: '/work/page.html' } as never)
-  expect(statuses.at(-1)).toBe('🐾 ⎇ main ↑2 · 파일 3개 · 🔗 조사 보고서')
+  expect(statuses.at(-1)).toBe('🐾 ★☆☆ · ⎇ main ↑2 · 파일 3개 · 🔗 조사 보고서')
   await runCommand($, 'dotchi', 'show side', 237)
   expect(statuses.at(-1)).toBe(undefined)
   await dotchi($, 'show working')
-  expect(statuses.at(-1)).toBe('🐾 ⎇ main ↑2 · 파일 3개 · 🔗 조사 보고서')
+  expect(statuses.at(-1)).toBe('🐾 ★☆☆ · ⎇ main ↑2 · 파일 3개 · 🔗 조사 보고서')
 })
 
 test('30초마다 git을 다시 읽는다', async ($, on) => {

@@ -73,10 +73,16 @@ export type Settings = {
   gauge: Gauge
   /** 상태 줄 테마 id */
   theme: string
+  /** 진화: 주간 리셋 때 1단계로 돌아갈지, 한도가 없는 계정의 주간 달러 예산(null이면 함께한 날 수) */
+  grow: GrowRule
 }
+export type GrowRule = { reset: boolean; budgetUsd: number | null }
 /** 행 우선 32×32. 각 칸은 'rrggbb' (#없음, 소문자) 또는 null(투명) */
 export type Frame = (string | null)[][]
-export type Art = { width: 32; height: 32; idle: Frame; work: Frame[] }
+/** 한 단계의 그림: 멈춘 그림 1장과 움직임 1~5컷 */
+export type StageArt = { idle: Frame; work: Frame[] }
+/** idle·work는 1단계. stages는 선택: 2·3단계 (빠진 단계는 바로 아래 단계 그림) */
+export type Art = { width: 32; height: 32; idle: Frame; work: Frame[]; stages?: Partial<Record<'2' | '3', StageArt>> }
 export type LineSet = { spinner: string[]; idle: string[]; ending: string[] }
 export type PackLines = Partial<Record<Lang, LineSet>>
 export type PackMeta = {
@@ -111,6 +117,10 @@ declare module 'claude-code' {
       meter: Meter | null
       /** 분 단위 시계: 패널의 지난 시간을 1분마다 다시 그리게 */
       minute: number
+      /** 지금 보여 줄 진화 단계 */
+      stage: 1 | 2 | 3
+      /** 쓰다듬은 하트를 이 시각(ms)까지 보인다. 0이면 없음 */
+      petted: number
     }
   }
 }

@@ -30,6 +30,7 @@ dotchi 是 [Claude Code](https://docs.claude.com/en/docs/claude-code) 的一个 
 - 🎨 **状态栏主题。** 仪表的外观与宠物分开选择：粉彩（默认）、糖果、森林、只用 ASCII 的单色。可以和 Claude 一起做自己的主题，用命令改一个颜色或表情，并在 [dotchi 网站](https://ms1011.github.io/dotchi-packs/?tab=themes)分享。
 - 📦 **分享角色包。** 每个角色就是一个小角色包。一条命令就能发布到 [dotchi 宠物网站](https://ms1011.github.io/dotchi-packs)，也可以导出成 zip。
 - 🌏 **台词支持四种语言。** 宠物可以用韩语、英语、日语或简体中文说话。命令提示为英语。
+- 🌱 **一周里慢慢长大。** 每周额度用得越多，宠物就会长到 3 个阶段（33% 起第 2 阶段，66% 起第 3 阶段），额度重置时回到第 1 阶段，上周的宠物会留在相册里。没有每周额度的账号按和 Claude 一起工作的天数（2 天第 2 阶段，4 天第 3 阶段）或自己设定的美元预算成长。离开一天以上再回来时它会迎接你，按 ♥（宠物有焦点时按 `p`）可以摸摸它。每只内置宠物都有自己的第 2、3 阶段造型，新孵化的宠物也会在孵化时一起设计。
 - 🐿️🐢 **一开始就有六只：** 抱着橡果的松鼠、其实跑得飞快的乌龟，以及每个国家一只：老虎 🐯（韩国）、柴犬 🐕（日本）、熊猫 🐼（中国）、白头海雕 🦅（美国）
 
 <p align="center">
@@ -101,6 +102,11 @@ claude plugin update dotchi
 | `/dotchi theme share <主题> [--as <id>]` | 把主题分享到 dotchi 网站 |
 | `/dotchi theme unshare <主题>` | 从网站撤下自己的主题 |
 | `/dotchi theme remove <主题>` | 删除自己的主题 |
+| `/dotchi grow` | 本周宠物的阶段，以及到下一阶段还差什么 |
+| `/dotchi grow reset on\|off` | 每周重置时是否回到第 1 阶段（默认 on）；off 则保持达到过的最高阶段 |
+| `/dotchi grow budget <美元>\|off` | 没有每周额度时：用每周美元预算代替工作天数来成长 |
+| `/dotchi album` | 过去的每一周：宠物、达到的阶段、摸摸次数、最常工作的时段 |
+| `/dotchi evolve <角色>` | 和 Claude 一起给宠物画第 2、3 阶段造型（饰品或衣服） |
 | `/dotchi lang ko\|en\|ja\|zh\|auto` | 宠物台词和名字的语言（`auto` 跟随系统设置） |
 
 **通知。** 等待你批准时，Claude Code 会自己发通知，宠物只在气泡里说一声。较长回答结束时的通知由 dotchi 发送。它们都是终端通知，需要你的终端应用显示出来。收不到的话，运行 `/dotchi notify fix`。

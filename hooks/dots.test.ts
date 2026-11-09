@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import type { Frame } from '../types'
-import { cropColumns, encodeFrame, halve, TRANSPARENT, usedColumns } from './dots'
+import { cropColumns, encodeFrame, halve, parseArt, stageArt, stageCount, TRANSPARENT, usedColumns } from './dots'
 
 const decode = (cells: string) => Array.from(new Uint32Array(Uint8Array.fromBase64(cells).buffer))
 
@@ -60,4 +60,60 @@ test('cropColumns는 그 범위만 남긴다', () => {
   expect(cropped.length).toBe(32)
   expect(cropped[0]!.length).toBe(19)
   expect(cropped[0]![0]).toBe('abcdef')
+})
+
+/* ---------- 단계 그림 ---------- */
+
+const solid = (color: string): (string | null)[][] => Array.from({ length: 32 }, () => Array.from({ length: 32 }, () => color))
+const base = { width: 32, height: 32, idle: solid('aaaaaa'), work: [solid('111111')] }
+
+test('stages 없는 옛 팩은 그대로', () => {
+  const art = parseArt(JSON.stringify(base))
+  expect(art).not.toBe(null)
+  expect('stages' in art!).toBe(false)
+  expect(stageCount(art!)).toBe(1)
+})
+
+test('stages를 싣는다', () => {
+  const stages = { '2': { idle: solid('222222'), work: [solid('222222')] }, '3': { idle: solid('333333'), work: [solid('333333'), solid('343434')] } }
+  const art = parseArt(JSON.stringify({ ...base, stages }))
+  expect(art?.stages).toEqual(stages)
+  expect(stageCount(art!)).toBe(3)
+})
+
+test('빈 stages는 단계 없음', () => {
+  const art = parseArt(JSON.stringify({ ...base, stages: {} }))
+  expect(art !== null && !('stages' in art)).toBe(true)
+})
+
+test('망가진 stages면 팩을 읽지 않는다', () => {
+  const ok = { idle: solid('222222'), work: [solid('222222')] }
+  expect(parseArt(JSON.stringify({ ...base, stages: { '4': ok } }))).toBe(null)
+  expect(parseArt(JSON.stringify({ ...base, stages: { '2': { ...ok, work: Array(6).fill(solid('222222')) } } }))).toBe(null)
+  expect(parseArt(JSON.stringify({ ...base, stages: { '2': { ...ok, idle: solid('222222').slice(1) } } }))).toBe(null)
+  expect(parseArt(JSON.stringify({ ...base, stages: [ok] }))).toBe(null)
+})
+
+test('stageArt는 빠진 단계를 아래로 채운다', () => {
+  const three = { idle: solid('333333'), work: [solid('333333')] }
+  const art = parseArt(JSON.stringify({ ...base, stages: { '3': three } }))!
+  expect(stageArt(art, 1)).toEqual({ idle: base.idle, work: base.work })
+  expect(stageArt(art, 2)).toEqual({ idle: base.idle, work: base.work })
+  expect(stageArt(art, 3)).toEqual(three)
+  expect(stageCount(art)).toBe(2)
+})
+
+test('usedColumns는 단계까지 합친다', () => {
+  const one = blank()
+  one[5]![10] = 'aaaaaa'
+  one[5]![20] = 'aaaaaa'
+  const three = blank()
+  three[0]![5] = 'bbbbbb'
+  const art = parseArt(JSON.stringify({ ...base, idle: one, work: [one], stages: { '3': { idle: three, work: [three] } } }))!
+  expect(usedColumns(art)).toEqual([5, 20])
+})
+
+test('stages: null은 단계 없음 (pixels.py check와 같게)', () => {
+  const art = parseArt(JSON.stringify({ ...base, stages: null }))
+  expect(art !== null && !('stages' in art)).toBe(true)
 })

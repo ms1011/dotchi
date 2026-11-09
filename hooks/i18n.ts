@@ -16,7 +16,7 @@ export const MESSAGES = {
   status: 'Now: {name} · Shown: {show} · One-liner after answers: {voice}',
   changed: 'Done. {status}',
   usage:
-    'Usage: /dotchi [character] · list · hatch [image path] · edit <character> · install <zip, folder or site id> · export <character> [--with-source] · share <character> [--as <id>] · unshare <character> · remove <character> · show [always|working|side] · voice [on|off] · lang [ko|en|ja|zh|auto] · limit [on|off] · notify [on|off|fix|after <seconds>] · rest [<hours> <tokens>|off] · line [full|mini|off] · line cost [on|off] · line context|week <warn%> <danger%>|reset · theme [list|<theme>|new [idea]|edit [theme]|set <key> <value>|install <file or site id>|export|share|unshare|remove <theme>]',
+    'Usage: /dotchi [character] · list · hatch [image path] · edit <character> · install <zip, folder or site id> · export <character> [--with-source] · share <character> [--as <id>] · unshare <character> · remove <character> · show [always|working|side] · voice [on|off] · lang [ko|en|ja|zh|auto] · limit [on|off] · notify [on|off|fix|after <seconds>] · rest [<hours> <tokens>|off] · line [full|mini|off] · line cost [on|off] · line context|week <warn%> <danger%>|reset · theme [list|<theme>|new [idea]|edit [theme]|set <key> <value>|install <file or site id>|export|share|unshare|remove <theme>] · grow [reset on|off|budget <usd>|off] · album · evolve <character>',
   unknownCharacter: "No character '{arg}'. See /dotchi list",
   listItem: '{mark}{id} ({name}) · {origin}',
   'origin.builtin': 'built-in',
@@ -72,6 +72,18 @@ export const MESSAGES = {
   themeAsExists: "You already have a theme called '{id}'",
   themeIdTaken: "'{id}' is already taken by another theme on the dotchi site. Try /dotchi theme share {target} --as {suggestion}",
   themeShared: 'Sent theme {name} ({id}) to the dotchi site. The check posts its result there in a minute: {issue}\nPage: {page}',
+  growStage: 'Stage {stage} of 3 · {detail}',
+  growLimit: 'weekly {percent}%',
+  growDays: '{days} days with Claude this week',
+  growBudget: '${spent} of ${budget} this week',
+  growNext: ' (next stage at {at})',
+  growRule: 'Weekly reset: {reset} · Budget: {budget}',
+  growLine: 'Growth: stage {stage} · reset {reset} · budget {budget}',
+  albumEmpty: 'No weeks in the album yet. Each weekly reset adds one',
+  albumOwl: 'night owl week',
+  albumMorning: 'early bird week',
+  albumDay: 'daytime week',
+  evolveStarted: 'Starting to add growth stages to {name}. Claude will ask you a few things next',
 }
 
 export type MessageKey = keyof typeof MESSAGES

@@ -30,6 +30,7 @@ dotchi is a mod for [Claude Code](https://docs.claude.com/en/docs/claude-code). 
 - 🎨 **Status-line themes.** Pick how the gauges look, separately from your pet: pastel (default), candy, forest or plain-ASCII mono. Make your own with Claude, tweak one color or emoji with a command, and share it on the [dotchi site](https://ms1011.github.io/dotchi-packs/?tab=themes).
 - 📦 **Share packs.** Every character is a small pack. Share it on [the dotchi pets site](https://ms1011.github.io/dotchi-packs) with one command, or export it as a zip.
 - 🌏 **Lines in four languages.** Your pet can talk in Korean, English, Japanese or Simplified Chinese. Command messages are in English.
+- 🌱 **It grows with your week.** Your pet grows through 3 stages as you use your weekly limit (stage 2 from 33%, stage 3 from 66%) and starts over at stage 1 when the limit resets, while last week's pet goes into an album. Accounts without a weekly limit grow with the days you work with Claude (2 days → stage 2, 4 days → stage 3) or a dollar budget you set. Come back after a day away and it says hi; press ♥ (or `p` while the pet has focus) to pat it. Every built-in pet has its own stage 2 and 3 look, and new pets get theirs when you hatch them.
 - 🐿️🐢 **Six pets to start with:** a squirrel hugging an acorn, a turtle that turns out to be very fast, and one from each of our languages: a tiger 🐯 (Korea), a Shiba Inu 🐕 (Japan), a panda 🐼 (China) and a bald eagle 🦅 (USA).
 
 <p align="center">
@@ -101,6 +102,11 @@ Everything is under `/dotchi`.
 | `/dotchi theme share <theme> [--as <id>]` | Share a theme on the dotchi site |
 | `/dotchi theme unshare <theme>` | Take your theme down from the site |
 | `/dotchi theme remove <theme>` | Remove a theme of yours |
+| `/dotchi grow` | Your pet's stage this week and what the next one needs |
+| `/dotchi grow reset on\|off` | Start over at stage 1 at each weekly reset (default on); off keeps the highest stage it reached |
+| `/dotchi grow budget <usd>\|off` | Without a weekly limit: grow by a weekly dollar budget instead of days worked |
+| `/dotchi album` | Past weeks: the pet, the stage it reached, pats and when you worked most |
+| `/dotchi evolve <character>` | Give a pet stage 2 and 3 looks with Claude (decorations or clothes) |
 | `/dotchi lang ko\|en\|ja\|zh\|auto` | Language of the pet's lines and names (`auto` follows your system) |
 
 **Notifications.** Claude Code sends its own notification when it waits for your approval; the pet only says so in its bubble. The notification for a long answer comes from dotchi. They travel as terminal notifications, so your terminal app has to show them. If it doesn't, run `/dotchi notify fix`.

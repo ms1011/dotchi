@@ -1,4 +1,4 @@
-import type { Gauge, Lang, LineMode, RestRule, Settings, ShowMode, Threshold } from '../types'
+import type { Gauge, GrowRule, Lang, LineMode, RestRule, Settings, ShowMode, Threshold } from '../types'
 import { DEFAULT_GAUGE } from './meter'
 import { DEFAULT_THEME_ID, isThemeId } from './theme'
 import { isId, isLang } from './packs'
@@ -16,6 +16,7 @@ export const DEFAULT_SETTINGS: Settings = {
   cost: false,
   gauge: DEFAULT_GAUGE,
   theme: DEFAULT_THEME_ID,
+  grow: { reset: true, budgetUsd: null },
 }
 
 const isInt = (value: unknown, min: number, max: number): value is number =>
@@ -34,6 +35,25 @@ const normalizeGauge = (value: unknown): Gauge => {
   return {
     context: isThreshold(raw.context) ? { warn: raw.context.warn, danger: raw.context.danger } : DEFAULT_GAUGE.context,
     week: isThreshold(raw.week) ? { warn: raw.week.warn, danger: raw.week.danger } : DEFAULT_GAUGE.week,
+  }
+}
+
+/** 달러: 20, $20, 12.5. 0보다 크고 백만 이하 */
+export const parseUsd = (raw: string): number | null => {
+  const match = /^\$?(\d+(?:\.\d+)?)$/.exec(raw.trim())
+  if (match === null) return null
+  const value = Number(match[1])
+  return isUsd(value) ? value : null
+}
+const isUsd = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= 1000000
+
+/** 저장된 진화 설정: 망가진 칸만 기본값 */
+const normalizeGrow = (value: unknown): GrowRule => {
+  const raw = typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {}
+  return {
+    reset: typeof raw.reset === 'boolean' ? raw.reset : DEFAULT_SETTINGS.grow.reset,
+    budgetUsd: isUsd(raw.budgetUsd) ? raw.budgetUsd : null,
   }
 }
 
@@ -72,6 +92,7 @@ export const normalizeSettings = (raw: unknown): Settings => {
     cost: typeof value.cost === 'boolean' ? value.cost : DEFAULT_SETTINGS.cost,
     gauge: normalizeGauge(value.gauge),
     theme: isThemeId(value.theme) ? value.theme : DEFAULT_SETTINGS.theme,
+    grow: normalizeGrow(value.grow),
   }
 }
 
@@ -107,6 +128,11 @@ export type DotchiCommand =
   | { kind: 'themeShare'; target: string; as: string | null }
   | { kind: 'themeUnshare'; target: string }
   | { kind: 'themeRemove'; target: string }
+  | { kind: 'grow' }
+  | { kind: 'growReset'; on: boolean }
+  | { kind: 'growBudget'; usd: number | null }
+  | { kind: 'album' }
+  | { kind: 'evolve'; target: string }
   | { kind: 'usage' }
 
 /** 경로 인자: 감싼 따옴표를 벗기고 앞의 ~를 홈 폴더로 */
@@ -201,6 +227,18 @@ export const parseDotchi = (args: string, home = ''): DotchiCommand => {
     return isRest(rule) ? { kind: 'rest', rest: rule } : { kind: 'usage' }
   }
   if (first === 'theme') return parseThemeCommand(trimmed, rest, home)
+  if (first === 'grow') {
+    if (rest.length === 0) return { kind: 'grow' }
+    if (rest.length === 2 && second === 'reset' && (rest[1] === 'on' || rest[1] === 'off')) return { kind: 'growReset', on: rest[1] === 'on' }
+    if (rest.length === 2 && second === 'budget') {
+      if (rest[1] === 'off') return { kind: 'growBudget', usd: null }
+      const usd = parseUsd(rest[1]!)
+      return usd === null ? { kind: 'usage' } : { kind: 'growBudget', usd }
+    }
+    return { kind: 'usage' }
+  }
+  if (first === 'album') return rest.length === 0 ? { kind: 'album' } : { kind: 'usage' }
+  if (first === 'evolve') return rest.length === 1 ? { kind: 'evolve', target: second! } : { kind: 'usage' }
   if (first === 'line') {
     if (rest.length === 1 && isLine(second)) return { kind: 'line', mode: second }
     if (rest.length === 2 && second === 'cost' && (rest[1] === 'on' || rest[1] === 'off')) return { kind: 'lineCost', on: rest[1] === 'on' }

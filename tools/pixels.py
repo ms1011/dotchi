@@ -6,6 +6,11 @@
   python3 tools/pixels.py preview <pack>   <pack>/preview.png (위: source/ 원본, 아래: 확대한 컷)
   python3 tools/pixels.py gif <pack>       <pack>/preview.gif (터미널 모습, dotchi.json 의 frameMs)
   python3 tools/pixels.py check <pack>     팩 형식 1 검사 (mod가 읽을 수 있는지). 문제가 있으면 종료 코드 1
+  python3 tools/pixels.py stage <pack> <n> <overlay.txt>
+                                           (n−1)단계 격자 위에 덧그림을 얹어 n단계(2·3) 격자를 쓴다.
+                                           움직임 컷마다 덧그림 둘레가 움직인 만큼(±2칸) 따라 옮긴다
+
+격자 이름: 1단계는 idle.txt, 1.txt…5.txt. n단계(2·3)는 s<n>-idle.txt, s<n>-1.txt…s<n>-5.txt.
 """
 
 import json
@@ -84,8 +89,10 @@ def load_art(pack):
     return json.loads((Path(pack) / 'art.json').read_text())
 
 
-def save_art(pack, idle, work):
+def save_art(pack, idle, work, stages=None):
     art = {'width': SIZE, 'height': SIZE, 'idle': idle, 'work': work[:MAX_FRAMES]}
+    if stages:
+        art['stages'] = {k: {'idle': v['idle'], 'work': v['work'][:MAX_FRAMES]} for k, v in sorted(stages.items())}
     path = Path(pack) / 'art.json'
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(art, separators=(',', ':')))
@@ -100,10 +107,32 @@ def frame_ms(pack):
     return value if isinstance(value, int) else DEFAULT_FRAME_MS
 
 
-def numbered(paths):
-    """'1.txt', '2.png' 처럼 이름이 숫자인 파일만 숫자 순으로."""
-    found = [(int(p.stem), p) for p in paths if p.stem.isdigit()]
+def numbered(paths, prefix=''):
+    """'1.txt', '2.png' 처럼 이름이 (prefix 뒤) 숫자인 파일만 숫자 순으로."""
+    found = []
+    for p in paths:
+        stem = p.stem[len(prefix):] if p.stem.startswith(prefix) else None
+        if stem is not None and stem.isdigit():
+            found.append((int(stem), p))
     return [p for _, p in sorted(found)]
+
+
+STAGE_KEYS = ('2', '3')
+
+
+def stage_prefix(stage):
+    """격자 이름 앞부분: 1단계는 '', n단계는 's<n>-'"""
+    return '' if str(stage) == '1' else f's{stage}-'
+
+
+def stages_of(art):
+    """[(단계 이름, idle, work)]: 1단계와 실린 단계들"""
+    out = [('1', art['idle'], art['work'])]
+    for key in STAGE_KEYS:
+        stage = (art.get('stages') or {}).get(key)
+        if stage:
+            out.append((key, stage['idle'], stage['work']))
+    return out
 
 
 def export_pack(pack):
@@ -112,21 +141,100 @@ def export_pack(pack):
     d.mkdir(parents=True, exist_ok=True)
     for old in d.glob('*.txt'):
         old.unlink()
-    (d / 'idle.txt').write_text(frame_to_grid(art['idle']))
-    for n, frame in enumerate(art['work'], start=1):
-        (d / f'{n}.txt').write_text(frame_to_grid(frame))
+    for key, idle, work in stages_of(art):
+        prefix = stage_prefix(key)
+        (d / f'{prefix}idle.txt').write_text(frame_to_grid(idle))
+        for n, frame in enumerate(work, start=1):
+            (d / f'{prefix}{n}.txt').write_text(frame_to_grid(frame))
     return d
+
+
+def read_stage(d, prefix):
+    """한 단계의 격자들 → (idle, work). 격자가 하나도 없으면 None"""
+    files = numbered(d.glob(f'{prefix}*.txt'), prefix)
+    idle_file = d / f'{prefix}idle.txt'
+    if not files and not idle_file.exists():
+        return None
+    work = [read_grid(path) for path in files[:MAX_FRAMES]]
+    idle = read_grid(idle_file) if idle_file.exists() else work[0]
+    return idle, work or [idle]
 
 
 def import_pack(pack):
     d = Path(pack) / 'grid'
-    files = numbered(d.glob('*.txt')) if d.exists() else []
-    idle_file = d / 'idle.txt'
-    if not files and not idle_file.exists():
+    first = read_stage(d, '') if d.exists() else None
+    if first is None:
         raise ValueError(f'{d}: grid에 컷이 없어요')
-    work = [read_grid(path) for path in files[:MAX_FRAMES]]
-    idle = read_grid(idle_file) if idle_file.exists() else work[0]
-    return save_art(pack, idle, work or [idle])
+    stages = {}
+    for key in STAGE_KEYS:
+        stage = read_stage(d, stage_prefix(key))
+        if stage is not None:
+            stages[key] = {'idle': stage[0], 'work': stage[1]}
+    return save_art(pack, first[0], first[1], stages)
+
+
+def overlay(frame, over, dy=0, dx=0):
+    """덧그림의 투명하지 않은 칸만 (dy, dx)만큼 옮겨 위에 얹는다"""
+    out = [row[:] for row in frame]
+    for y, row in enumerate(over):
+        for x, c in enumerate(row):
+            ty, tx = y + dy, x + dx
+            if c is not None and 0 <= ty < SIZE and 0 <= tx < SIZE:
+                out[ty][tx] = c
+    return out
+
+
+FOLLOW = 2
+FOLLOW_MARGIN = 3
+
+
+def follow_shift(idle, frame, over):
+    """덧그림 둘레(여백 3칸)의 그림이 idle에서 frame으로 얼마나 옮겨졌는지 (dy, dx), 각 ±2칸 안.
+    가장 잘 맞는 쪽, 같으면 덜 움직인 쪽"""
+    cells = [(y, x) for y in range(SIZE) for x in range(SIZE) if over[y][x] is not None]
+    if not cells:
+        return 0, 0
+    y0 = max(0, min(y for y, _ in cells) - FOLLOW_MARGIN)
+    y1 = min(SIZE - 1, max(y for y, _ in cells) + FOLLOW_MARGIN)
+    x0 = max(0, min(x for _, x in cells) - FOLLOW_MARGIN)
+    x1 = min(SIZE - 1, max(x for _, x in cells) + FOLLOW_MARGIN)
+
+    def at(f, y, x):
+        return f[y][x] if 0 <= y < SIZE and 0 <= x < SIZE else None
+
+    best = None
+    for dy in range(-FOLLOW, FOLLOW + 1):
+        for dx in range(-FOLLOW, FOLLOW + 1):
+            miss = sum(1 for y in range(y0, y1 + 1) for x in range(x0, x1 + 1)
+                       if at(idle, y, x) != at(frame, y + dy, x + dx))
+            key = (miss, abs(dy) + abs(dx))
+            if best is None or key < best[0]:
+                best = (key, dy, dx)
+    return best[1], best[2]
+
+
+def stage_pack(pack, stage, overlay_path):
+    """(n−1)단계 격자(없으면 그 아래) 위에 덧그림을 얹어 n단계 격자를 쓴다"""
+    if str(stage) not in STAGE_KEYS:
+        raise ValueError('단계는 2 또는 3이어야 해요')
+    d = Path(pack) / 'grid'
+    over = read_grid(Path(overlay_path))
+    below = None
+    for key in [str(k) for k in range(int(stage) - 1, 0, -1)]:
+        below = read_stage(d, stage_prefix(key)) if d.exists() else None
+        if below is not None:
+            break
+    if below is None:
+        raise ValueError(f'{d}: 아래 단계 격자가 없어요')
+    prefix = stage_prefix(stage)
+    for old in d.glob(f'{prefix}*.txt'):
+        old.unlink()
+    idle, work = below
+    (d / f'{prefix}idle.txt').write_text(frame_to_grid(overlay(idle, over)))
+    for n, frame in enumerate(work, start=1):
+        dy, dx = follow_shift(idle, frame, over)
+        (d / f'{prefix}{n}.txt').write_text(frame_to_grid(overlay(frame, over, dy, dx)))
+    return d
 
 
 def read_grid(path):
@@ -162,7 +270,9 @@ def render_frame(frame):
 
 def preview_pack(pack):
     art = load_art(pack)
-    frames = [('idle', art['idle'])] + [(str(n), f) for n, f in enumerate(art['work'], start=1)]
+    rows = [(f'stage {key} ', [('idle', idle)] + [(str(n), f) for n, f in enumerate(work, start=1)]) for key, idle, work in stages_of(art)]
+    if len(rows) == 1:
+        rows = [('', rows[0][1])]
     gap, label = 16, 20
     tile = SIZE * SCALE
     pictures = []
@@ -172,19 +282,21 @@ def preview_pack(pack):
             width = max(1, round(img.width * 256 / img.height))
             pictures.append(img.resize((width, 256)))
     top = (256 + gap) if pictures else 0
-    width = max(len(frames) * (tile + gap), sum(p.width + gap for p in pictures)) + gap
-    height = top + label + tile + gap * 2
+    width = max(max(len(frames) for _, frames in rows) * (tile + gap), sum(p.width + gap for p in pictures)) + gap
+    height = top + (label + tile + gap) * len(rows) + gap
     sheet = Image.new('RGB', (width, height), (255, 255, 255))
     draw = ImageDraw.Draw(sheet)
     x = gap
     for picture in pictures:
         sheet.paste(picture, (x, gap), picture)
         x += picture.width + gap
-    x = gap
-    for name, frame in frames:
-        draw.text((x, top + gap), name, fill=(0, 0, 0))
-        sheet.paste(render_frame(frame), (x, top + gap + label))
-        x += tile + gap
+    for i, (title, frames) in enumerate(rows):
+        y = top + gap + i * (label + tile + gap)
+        x = gap
+        for name, frame in frames:
+            draw.text((x, y), f'{title}{name}', fill=(0, 0, 0))
+            sheet.paste(render_frame(frame), (x, y + label))
+            x += tile + gap
     out = Path(pack) / 'preview.png'
     sheet.save(out)
     return out
@@ -206,15 +318,19 @@ def render_terminal(frame, cell_w=8, cell_h=16, background=(30, 30, 36)):
 
 
 def gif_pack(pack):
+    """단계가 있으면 1→2→3단계로 자라는 모습 (단계마다 움직임 두 바퀴)"""
     art = load_art(pack)
-    images = [render_terminal(f) for f in art['work']]
+    stages = stages_of(art)
+    loops = 2 if len(stages) > 1 else 1
+    images = [render_terminal(f) for _, _, work in stages for _ in range(loops) for f in work]
     out = Path(pack) / 'preview.gif'
     images[0].save(out, save_all=True, append_images=images[1:], duration=frame_ms(pack), loop=0, disposal=2)
     return out
 
 
 LANGS = ('ko', 'en', 'ja', 'zh')
-RESERVED = {'list', 'hatch', 'edit', 'install', 'export', 'remove', 'show', 'voice', 'lang', 'share', 'unshare', 'line', 'theme'}
+RESERVED = {'list', 'hatch', 'edit', 'install', 'export', 'remove', 'show', 'voice', 'lang', 'share', 'unshare', 'line', 'theme',
+            'grow', 'album', 'evolve'}
 ID = __import__('re').compile(r'^[a-z0-9-]{1,32}$')
 HEX = __import__('re').compile(r'^[0-9a-f]{6}$')
 
@@ -262,6 +378,14 @@ def check_pack(pack):
         work = art.get('work')
         if not (isinstance(work, list) and 1 <= len(work) <= MAX_FRAMES and all(_frame_ok(f) for f in work)):
             problems.append(f'art.json: work must be 1-{MAX_FRAMES} frames of 32x32')
+        stages = art.get('stages')
+        if stages is not None and not (
+            isinstance(stages, dict) and all(
+                key in STAGE_KEYS and isinstance(stage, dict) and _frame_ok(stage.get('idle'))
+                and isinstance(stage.get('work'), list) and 1 <= len(stage['work']) <= MAX_FRAMES
+                and all(_frame_ok(f) for f in stage['work'])
+                for key, stage in stages.items())):
+            problems.append(f'art.json: stages must be {{"2"|"3": {{idle, work 1-{MAX_FRAMES} frames}}}}')
     elif art is not None:
         problems.append('art.json: must be an object')
     lines = _load(pack / 'lines.json', problems)
@@ -287,6 +411,13 @@ def main(argv):
             print(problem, file=sys.stderr)
         print('OK' if not problems else f'{len(problems)} problem(s)')
         return 1 if problems else 0
+    if len(argv) == 4 and argv[0] == 'stage':
+        try:
+            print(stage_pack(Path(argv[1]).expanduser(), argv[2], Path(argv[3]).expanduser()))
+        except (ValueError, FileNotFoundError) as error:
+            print(error, file=sys.stderr)
+            return 1
+        return 0
     commands = {'export': export_pack, 'import': import_pack, 'preview': preview_pack, 'gif': gif_pack}
     if len(argv) != 2 or argv[0] not in commands:
         print(__doc__.strip(), file=sys.stderr)
