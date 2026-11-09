@@ -17,7 +17,7 @@ COLOR = re.compile(r'^#[0-9a-fA-F]{6}$')
 LIMITS = {'name': 40, 'description': 300}
 DEFAULT = {
     'colors': {'ok': '#8fd9b6', 'warn': '#ffd86b', 'danger': '#ff8fa3', 'dim': '#9a9ab0', 'accent': 'pet'},
-    'faces': {'ok': '(•ᴗ•)', 'warn': '(•_•;)', 'danger': '(×_×)'},
+    'faces': {'ok': '', 'warn': '', 'danger': ''},
     'hearts': ['♥', '♡'],
     'bar': ['▰', '▱'],
     'symbols': {'week': '⚡', 'tired': '🥱', 'reset': '↻', 'time': '⏱'},
@@ -34,7 +34,9 @@ def is_glyph(value):
 
 
 def is_face(value):
-    """얼굴: 1~12 코드 포인트, 안쪽 공백은 되고 줄바꿈·제어 문자·백틱은 안 된다"""
+    """얼굴: 1~12 코드 포인트, 안쪽 공백은 되고 줄바꿈·제어 문자·백틱은 안 된다. 빈 값이면 얼굴 없음"""
+    if value == '':
+        return True
     return isinstance(value, str) and value.strip() != '' and len(value) <= 12 and '`' not in value and not _control(value)
 
 

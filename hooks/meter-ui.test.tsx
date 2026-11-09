@@ -130,7 +130,8 @@ test('옆 패널: 상태 카드에 색, 얼굴은 펫 대표색(무채색 펫이
   await $.session.measure(measure(78, 41))
   const ui = await $.ui.mount(pane)
   const texts = await ui.findAll({ type: 'Text' })
-  const face = texts.find(t => t.text === '(•_•;)')
+  // 파스텔은 얼굴이 없다: 세션 줄 앞은 하트 기호, 단계 색
+  const face = texts.find(t => t.text === '♥')
   expect(face?.props.color).toBe('#ffd86b')
   const bars = texts.filter(t => /▰/.test(t.text)).map(t => [t.text, t.props.color])
   expect(bars).toEqual([
@@ -142,7 +143,7 @@ test('옆 패널: 상태 카드에 색, 얼굴은 펫 대표색(무채색 펫이
 
   await $.session.measure(measure(30, 41))
   const calm = await $.ui.mount(pane)
-  const happy = (await calm.findAll({ type: 'Text' })).find(t => t.text === '(•ᴗ•)')
+  const happy = (await calm.findAll({ type: 'Text' })).find(t => t.text === '♥')
   expect(happy?.props.color).toBe('#b8a6ff')
   await calm.unmount()
 })
@@ -165,7 +166,7 @@ test('/dotchi line context: 바꾼 기준으로 말풍선과 상태 줄', async 
   await $.session.start(SESSION)
   expect((await dotchi($, 'line context 50 80')).text).toContain('Done.')
   await $.session.measure(measure(62, 41))
-  expect(statuses.at(-1)).toBe('🌰 ★★☆ · ♥♥♥♡♡ 62% (•_•;) · ⚡ 41%')
+  expect(statuses.at(-1)).toBe('🌰 ★★☆ · ♥♥♥♡♡ 62% · ⚡ 41%')
   expect(await bandText($)).not.toContain('세션이 거의')
   await $.session.measure(measure(81))
   expect(await bandText($)).toContain('세션이 거의 찼어요 (81%)')

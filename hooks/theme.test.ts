@@ -13,7 +13,7 @@ test('빈 칸은 기본 모양으로 채운다', () => {
 test('기본 모양은 지금까지의 파스텔, 강조색은 펫 색', () => {
   expect(DEFAULT_LOOK).toEqual({
     colors: { ok: '#8fd9b6', warn: '#ffd86b', danger: '#ff8fa3', dim: '#9a9ab0', accent: 'pet' },
-    faces: { ok: '(•ᴗ•)', warn: '(•_•;)', danger: '(×_×)' },
+    faces: { ok: '', warn: '', danger: '' },
     hearts: ['♥', '♡'],
     bar: ['▰', '▱'],
     symbols: { week: '⚡', tired: '🥱', reset: '↻', time: '⏱' },
@@ -38,7 +38,7 @@ test('틀린 값이 있으면 테마 전체를 받지 않는다', () => {
     { colors: { ok: 'pink' } },
     { colors: { ok: '#fff' } },
     { colors: { accent: 'pets' } },
-    { faces: { ok: '' } },
+    { faces: { ok: '   ' } },
     { faces: { ok: 'x'.repeat(13) } },
     { faces: { ok: 'a\nb' } },
     { faces: { ok: 'a`b' } },
@@ -90,4 +90,11 @@ test('set: 한 칸만 바꾸고, 틀리면 이유', () => {
   expect(setThemeKey(raw, 'hearts', '♥')).toEqual({ error: 'value' })
   expect(setThemeKey(raw, 'colour.ok', '#000000')).toEqual({ error: 'key' })
   expect(THEME_KEYS).toContain('symbol.time')
+})
+
+test('얼굴은 빈 값이면 얼굴 없음 (파스텔·숲·모노)', () => {
+  const look = parseTheme(JSON.stringify({ format: 1, id: 'plain', name: 'Plain', faces: { ok: '', warn: '', danger: '' } }))?.look
+  expect(look?.faces).toEqual({ ok: '', warn: '', danger: '' })
+  expect(DEFAULT_LOOK.faces).toEqual({ ok: '', warn: '', danger: '' })
+  expect(parseTheme(JSON.stringify({ format: 1, id: 'plain', name: 'Plain', faces: { ok: ' ' } }))).toBe(null)
 })

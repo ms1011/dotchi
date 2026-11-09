@@ -18,7 +18,7 @@ export const DEFAULT_THEME_ID = 'pastel'
 /** 기본 모양: 파스텔. 강조색은 펫 그림에서 뽑은 대표색 */
 export const DEFAULT_LOOK: Look = {
   colors: { ok: '#8fd9b6', warn: '#ffd86b', danger: '#ff8fa3', dim: '#9a9ab0', accent: 'pet' },
-  faces: { ok: '(•ᴗ•)', warn: '(•_•;)', danger: '(×_×)' },
+  faces: { ok: '', warn: '', danger: '' },
   hearts: ['♥', '♡'],
   bar: ['▰', '▱'],
   symbols: { week: '⚡', tired: '🥱', reset: '↻', time: '⏱' },
@@ -36,8 +36,9 @@ const len = (text: string) => [...text].length
 const isGlyph = (value: unknown): value is string =>
   typeof value === 'string' && len(value) >= 1 && len(value) <= 4 && !/[\s\p{Cc}`]/u.test(value)
 /** 얼굴: 1~12 코드 포인트. 안쪽 공백은 되고 줄바꿈·제어 문자·백틱은 안 된다 */
+/** 얼굴: 12글자까지. 빈 값이면 얼굴 없음 (공백만 있는 것은 안 된다) */
 const isFace = (value: unknown): value is string =>
-  typeof value === 'string' && value.trim() !== '' && len(value) <= 12 && !/[\p{Cc}`]/u.test(value)
+  typeof value === 'string' && (value === '' || (value.trim() !== '' && len(value) <= 12 && !/[\p{Cc}`]/u.test(value)))
 
 const LEVELS: readonly Level[] = ['ok', 'warn', 'danger']
 const COLOR_KEYS = ['ok', 'warn', 'danger', 'dim', 'accent'] as const

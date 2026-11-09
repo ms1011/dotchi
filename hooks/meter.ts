@@ -135,7 +135,9 @@ export const statusLine = (input: StatusInput): string | undefined => {
   if (percent !== null && percent > 0) {
     if (full) {
       const level = contextLevel(percent, gauge.context)
-      const mood = level === 'ok' ? '' : ` ${look.faces[level]}${level === 'danger' ? ' /compact' : ''}`
+      // 얼굴이 없는 테마는 얼굴 없이, 위험이면 /compact만
+      const face = look.faces[level]
+      const mood = level === 'ok' ? '' : `${face === '' ? '' : ` ${face}`}${level === 'danger' ? ' /compact' : ''}`
       parts.push(`${hearts(percent, 5, look.hearts)} ${percent}%${mood}`)
     } else {
       parts.push(`${percent}%`)
@@ -182,7 +184,8 @@ export const cardOf = (
     const level = contextLevel(percent, gauge.context)
     rows.push({
       kind: 'context',
-      lead: look.faces[level],
+      // 얼굴이 없으면 세션 줄 앞에 하트 기호 (주간 줄 앞의 ⚡처럼)
+      lead: look.faces[level] === '' ? look.hearts[0] : look.faces[level],
       label: say(lang, 'gaugeFull'),
       bar: bar(percent, width, look.bar),
       percent: `${percent}%`,

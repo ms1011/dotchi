@@ -17,9 +17,9 @@
     "accent": "#e0e0e0"
   },
   "faces": {
-    "ok": "(^_^)",
-    "warn": "(-_-;)",
-    "danger": "(x_x)"
+    "ok": "",
+    "warn": "",
+    "danger": ""
   },
   "hearts": [
     "#",

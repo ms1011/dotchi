@@ -23,6 +23,10 @@ class BuiltinThemesTest(unittest.TestCase):
             self.assertEqual(theme['id'], tid)
             self.assertEqual(sorted(theme['name']), sorted(tool.LANGS))
 
+    def test_plain_themes_have_no_faces(self):
+        for tid in ('pastel', 'forest', 'mono'):
+            self.assertEqual(self.load(tid)['faces'], {'ok': '', 'warn': '', 'danger': ''}, tid)
+
     def test_pastel_is_the_default_look(self):
         # hooks/theme.ts 의 DEFAULT_LOOK 과 같은 값 (theme.test.ts 가 그쪽을 확인한다)
         self.assertEqual(tool.look_of(self.load('pastel')), tool.DEFAULT)
@@ -52,7 +56,7 @@ class CheckTest(unittest.TestCase):
     def test_same_rejects_as_the_mod(self):
         bad = [
             {'format': 2}, {'id': 'Bad Id'}, {'id': 'new'}, {'name': ''}, {'colors': {'ok': 'pink'}}, {'colors': {'ok': '#fff'}},
-            {'colors': {'accent': 'pets'}}, {'faces': {'ok': ''}}, {'faces': {'ok': 'x' * 13}}, {'faces': {'ok': 'a\nb'}},
+            {'colors': {'accent': 'pets'}}, {'faces': {'ok': '   '}}, {'faces': {'ok': 'x' * 13}}, {'faces': {'ok': 'a\nb'}},
             {'faces': {'ok': 'a`b'}}, {'hearts': ['♥']}, {'hearts': ['♥', ' ']}, {'bar': ['▰', 'abcde']},
             {'symbols': {'week': 'a b'}}, {'symbols': {'week': 3}}, {'description': 'x' * 301}, {'name': 'x' * 41},
         ]
