@@ -65,7 +65,7 @@ const bandText = async ($: Engine) => {
   return all
 }
 
-test('측정값이 오면 상태 줄에 아이콘, 배부름, 주간', async ($, on) => {
+test('측정값이 오면 상태 줄에 아이콘, 세션, 주간', async ($, on) => {
   const { statuses, clock } = setup(on)
   await clock.set(NOW)
   await $.session.start(SESSION)
@@ -88,22 +88,22 @@ test('컨텍스트 90%를 넘으면 한 번만 말하고, /compact로 내려간 
   await clock.set(NOW)
   await $.session.start(SESSION)
   await $.session.measure(measure(92))
-  expect(await bandText($)).toContain('배가 꽉 찼어요 (92%)')
+  expect(await bandText($)).toContain('세션이 거의 찼어요 (92%)')
   await $.prompt.submit({ text: 'ok' } as never)
   await $.session.measure(measure(93))
-  expect(await bandText($)).not.toContain('배가 꽉')
+  expect(await bandText($)).not.toContain('세션이 거의')
   await $.session.measure(measure(40))
   await $.session.measure(measure(91))
-  expect(await bandText($)).toContain('배가 꽉 찼어요 (91%)')
+  expect(await bandText($)).toContain('세션이 거의 찼어요 (91%)')
 })
 
-test('한도 경고를 끄면 배부름 말풍선도 없다', async ($, on) => {
+test('한도 경고를 끄면 세션 말풍선도 없다', async ($, on) => {
   const { clock } = setup(on, { store: {} })
   await clock.set(NOW)
   await $.session.start(SESSION)
   await dotchi($, 'limit off')
   await $.session.measure(measure(95))
-  expect(await bandText($)).not.toContain('배가 꽉')
+  expect(await bandText($)).not.toContain('세션이 거의')
 })
 
 test('/dotchi line: mini, 비용, off', async ($, on) => {
@@ -166,9 +166,9 @@ test('/dotchi line context: 바꾼 기준으로 말풍선과 상태 줄', async 
   expect((await dotchi($, 'line context 50 80')).text).toContain('Done.')
   await $.session.measure(measure(62, 41))
   expect(statuses.at(-1)).toBe('🌰 ★★☆ · ♥♥♥♡♡ 62% (•_•;) · ⚡ 41%')
-  expect(await bandText($)).not.toContain('배가 꽉')
+  expect(await bandText($)).not.toContain('세션이 거의')
   await $.session.measure(measure(81))
-  expect(await bandText($)).toContain('배가 꽉 찼어요 (81%)')
+  expect(await bandText($)).toContain('세션이 거의 찼어요 (81%)')
   expect((await dotchi($, '')).text).toContain('Gauge: context 50/80% · week 80/95%')
   await dotchi($, 'line context reset')
   expect((await dotchi($, '')).text).toContain('Gauge: context 70/90% · week 80/95%')

@@ -1248,7 +1248,7 @@ export const register: Register = on => {
         <Text wrap="wrap">{alert ?? wordsFor(settings, isWorking, tick)}</Text>
       </Box>
     )
-    // 펫 아래: 상태 카드(배부름·주간), git 상태, 이 세션의 아티팩트. 펫이 작은 그림(12줄)으로 설 자리는 남긴다
+    // 펫 아래: 상태 카드(세션·주간), git 상태, 이 세션의 아티팩트. 펫이 작은 그림(12줄)으로 설 자리는 남긴다
     const { Link } = $.ui.resolve(e)
     const git = await read($, gitAtom)
     const artifacts = await read($, artifactsAtom)
@@ -1270,7 +1270,7 @@ export const register: Register = on => {
     const artifactRows = Math.min(artifacts.length, Math.max(1, Math.floor(restRoom / 3)))
     const gitRoom = restRoom - (artifactRows > 0 ? artifactRows + 1 : 0) - 1
     const lines = git === null ? [] : gitLines(git, touched, bodyColumns, gitRoom, lang())
-    // 얼굴은 괜찮을 때 강조색(테마가 'pet'이면 펫의 대표색), 배부르면 단계 색.
+    // 얼굴은 괜찮을 때 강조색(테마가 'pet'이면 펫의 대표색), 세션이 차면 단계 색.
     // 앞 칸과 이름 칸은 가장 긴 것에 맞춰 막대를 세로로 맞춘다
     const accent = colors.accent === 'pet' ? accentOf(currentOf(settings)?.art ?? null) : colors.accent
     const leadCols = Math.max(0, ...card.rows.map(row => textCols(row.lead))) + 1
