@@ -6,6 +6,8 @@
   python3 tools/pixels.py preview <pack>   <pack>/preview.png (위: source/ 원본, 아래: 확대한 컷)
   python3 tools/pixels.py gif <pack>       <pack>/preview.gif (터미널 모습, dotchi.json 의 frameMs)
   python3 tools/pixels.py check <pack>     팩 형식 1 검사 (mod가 읽을 수 있는지). 문제가 있으면 종료 코드 1
+  python3 tools/pixels.py webp <pack> <out>  <out>/ 에 움직이는 WebP (8배, 투명 배경, 손실 없음):
+                                           stage<n>-idle.webp, stage<n>-work.webp, grow.webp(1→2→3단계)
   python3 tools/pixels.py stage <pack> <n> <overlay.txt>
                                            (n−1)단계 격자 위에 덧그림을 얹어 n단계(2·3) 격자를 쓴다.
                                            움직임 컷마다 덧그림 둘레가 움직인 만큼(±2칸) 따라 옮긴다
@@ -328,6 +330,42 @@ def gif_pack(pack):
     return out
 
 
+WEBP_SCALE = 8
+
+
+def render_sprite(frame, scale=WEBP_SCALE):
+    """투명 배경 위 픽셀 그대로 (scale배)"""
+    img = Image.new('RGBA', (SIZE, SIZE), (0, 0, 0, 0))
+    for y, row in enumerate(frame):
+        for x, c in enumerate(row):
+            if c is not None:
+                img.putpixel((x, y), tuple(int(c[i:i + 2], 16) for i in (0, 2, 4)) + (255,))
+    return img.resize((SIZE * scale, SIZE * scale), Image.NEAREST)
+
+
+def save_webp(path, frames, duration):
+    images = [render_sprite(f) for f in frames]
+    images[0].save(path, format='WEBP', save_all=len(images) > 1, append_images=images[1:],
+                   duration=duration, loop=0, lossless=True)
+    return path
+
+
+def webp_pack(pack, out):
+    """단계마다 쉴 때(멈춘 그림)·일할 때(움직임), 그리고 자라는 모습(단계마다 움직임 두 바퀴)"""
+    art = load_art(pack)
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    ms = frame_ms(pack)
+    stages = stages_of(art)
+    made = []
+    for n, (_, idle, work) in enumerate(stages, start=1):
+        made.append(save_webp(out / f'stage{n}-idle.webp', [idle], ms))
+        made.append(save_webp(out / f'stage{n}-work.webp', work, ms))
+    loops = 2 if len(stages) > 1 else 1
+    made.append(save_webp(out / 'grow.webp', [f for _, _, work in stages for _ in range(loops) for f in work], ms))
+    return made
+
+
 LANGS = ('ko', 'en', 'ja', 'zh')
 RESERVED = {'list', 'hatch', 'edit', 'install', 'export', 'remove', 'show', 'voice', 'lang', 'share', 'unshare', 'line', 'theme',
             'grow', 'album', 'evolve'}
@@ -411,6 +449,14 @@ def main(argv):
             print(problem, file=sys.stderr)
         print('OK' if not problems else f'{len(problems)} problem(s)')
         return 1 if problems else 0
+    if len(argv) == 3 and argv[0] == 'webp':
+        try:
+            print(Path(argv[2]).expanduser())
+            webp_pack(Path(argv[1]).expanduser(), Path(argv[2]).expanduser())
+        except (ValueError, FileNotFoundError, KeyError) as error:
+            print(error, file=sys.stderr)
+            return 1
+        return 0
     if len(argv) == 4 and argv[0] == 'stage':
         try:
             print(stage_pack(Path(argv[1]).expanduser(), argv[2], Path(argv[3]).expanduser()))

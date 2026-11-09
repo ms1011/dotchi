@@ -293,3 +293,45 @@ class FollowTest(unittest.TestCase):
         self.assertEqual(two['work'][0][9][12], 'aaaaaa')
         self.assertEqual(two['work'][1][10][12], 'aaaaaa')
         self.assertEqual(two['work'][1][9][12], None)
+
+
+class WebpTest(unittest.TestCase):
+    """사이트 빌드가 쓰는 움직이는 WebP: 단계마다 쉴 때·일할 때, 자라는 모습"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.pack = Path(self.tmp.name) / 'bunny'
+        self.out = Path(self.tmp.name) / 'out'
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def frames(self, path):
+        with Image.open(path) as img:
+            return img.format, img.size, getattr(img, 'n_frames', 1), img.mode
+
+    def test_stages_and_growth(self):
+        write_stage_pack(self.pack)
+        made = pixels.webp_pack(self.pack, self.out)
+        names = sorted(p.name for p in made)
+        self.assertEqual(names, ['grow.webp', 'stage1-idle.webp', 'stage1-work.webp', 'stage2-idle.webp',
+                                 'stage2-work.webp', 'stage3-idle.webp', 'stage3-work.webp'])
+        fmt, size, n, mode = self.frames(self.out / 'stage2-work.webp')
+        self.assertEqual((fmt, size, n), ('WEBP', (256, 256), 2))
+        self.assertEqual(self.frames(self.out / 'stage1-idle.webp')[2], 1)
+        self.assertEqual(self.frames(self.out / 'grow.webp')[2], 3 * 2 * 2)
+        with Image.open(self.out / 'stage1-idle.webp') as img:
+            rgba = img.convert('RGBA')
+            self.assertEqual(rgba.getpixel((0, 0))[3], 0)
+            self.assertEqual(rgba.getpixel((8 * 12 + 3, 8 * 12 + 3))[:3], (255, 255, 255))
+
+    def test_without_stages_grow_is_the_work_loop(self):
+        write_pack(self.pack, make_frame(), [make_frame('222222'), make_frame('333333')])
+        made = pixels.webp_pack(self.pack, self.out)
+        self.assertEqual(sorted(p.name for p in made), ['grow.webp', 'stage1-idle.webp', 'stage1-work.webp'])
+        self.assertEqual(self.frames(self.out / 'grow.webp')[2], 2)
+
+    def test_cli(self):
+        write_pack(self.pack, make_frame(), [make_frame('222222')])
+        self.assertEqual(pixels.main(['webp', str(self.pack), str(self.out)]), 0)
+        self.assertTrue((self.out / 'grow.webp').exists())
