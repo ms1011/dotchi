@@ -101,7 +101,7 @@ def _paint(hex_color, text):
 
 
 def preview(path):
-    """세 단계(괜찮음·배부름·꽉 참)의 상태 줄과 패널 카드"""
+    """세 단계(여유·주의·위험)의 상태 줄과 패널 카드"""
     look = look_of(json.loads(Path(path).read_text()))
     c, f, s = look['colors'], look['faces'], look['symbols']
     accent = '#b8a6ff' if c['accent'] == 'pet' else c['accent']
@@ -113,7 +113,7 @@ def preview(path):
         lines.append(f"상태 줄  🐾 {hearts} {percent}%{mood} · {s['week']} {week}%{' ' + s['tired'] if level == 'danger' else ''} · ⎇ main")
         bar = lambda p: look['bar'][0] * round(p / 10) + look['bar'][1] * (10 - round(p / 10))
         week_level = 'danger' if week >= 95 else 'warn' if week >= 80 else 'ok'
-        lines.append('패널    ' + _paint(accent if level == 'ok' else c[level], f[level]) + ' ' + _paint(c['dim'], '배부름') + ' '
+        lines.append('패널    ' + _paint(accent if level == 'ok' else c[level], f[level]) + ' ' + _paint(c['dim'], '세션') + ' '
                      + _paint(c[level], f'{bar(percent)} {percent}%'))
         lines.append('        ' + _paint(c[week_level], s['week']) + ' ' + _paint(c['dim'], '주간') + ' '
                      + _paint(c[week_level], f'{bar(week)} {week}%') + _paint(c['dim'], f" {s['reset']} 월 09:00"))

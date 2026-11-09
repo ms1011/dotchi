@@ -16,8 +16,8 @@ class BuiltinThemesTest(unittest.TestCase):
         return json.loads((THEMES / tid / 'theme.json').read_text())
 
     def test_builtins_pass_the_check(self):
-        self.assertEqual(sorted(p.name for p in THEMES.iterdir() if p.is_dir()), ['candy', 'forest', 'mono', 'pastel'])
-        for tid in ('candy', 'forest', 'mono', 'pastel'):
+        self.assertEqual(sorted(p.name for p in THEMES.iterdir() if p.is_dir()), ['candy', 'classic', 'forest', 'modern', 'mono', 'pastel', 'rainbow'])
+        for tid in ('candy', 'classic', 'forest', 'modern', 'mono', 'pastel', 'rainbow'):
             self.assertEqual(tool.check_theme(THEMES / tid / 'theme.json'), [], tid)
             theme = self.load(tid)
             self.assertEqual(theme['id'], tid)

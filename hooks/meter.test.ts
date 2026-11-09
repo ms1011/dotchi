@@ -46,7 +46,7 @@ const base = {
   lang: 'ko' as const,
 }
 
-test('하트는 다섯 칸, 배부른 만큼 찬다', () => {
+test('하트는 다섯 칸, 세션이 찬 만큼 찬다', () => {
   expect(hearts(0)).toBe('♡♡♡♡♡')
   expect(hearts(62)).toBe('♥♥♥♡♡')
   expect(hearts(100)).toBe('♥♥♥♥♥')
@@ -115,7 +115,7 @@ test('측정값이 비어 있으면 비운 채로', () => {
   expect(m).toEqual({ context: { percent: null, tokens: null, window: 200000 }, week: null, costUsd: null, model: null })
 })
 
-test('상태 줄: 아이콘, 배부름, 주간, git, 시간, 아티팩트', () => {
+test('상태 줄: 아이콘, 세션, 주간, git, 시간, 아티팩트', () => {
   const line = statusLine({
     ...base,
     git: { ...git, files: [{ code: 'M', path: 'a.ts' }], added: 120, removed: 8 },
@@ -132,7 +132,7 @@ test('상태 줄: 갓 시작하면 0인 것은 다 숨긴다', () => {
   expect(statusLine({ ...base, meter: null, git: null })).toBe(undefined)
 })
 
-test('상태 줄: 배부르면 얼굴이 나오고, 꽉 차면 /compact를 권한다', () => {
+test('상태 줄: 세션이 차면 얼굴이 나오고, 꽉 차면 /compact를 권한다', () => {
   expect(statusLine({ ...base, git: null, meter: meter({ context: { percent: 78, tokens: 1, window: 2 }, week: null }) })).toBe(
     '🌰 ♥♥♥♥♡ 78% (•_•;)',
   )
@@ -163,10 +163,10 @@ test('상태 줄 mini: 퍼센트와 브랜치만', () => {
   expect(line).toBe('🌰 62% · ⚡ 41% · ⎇ main ↑2')
 })
 
-test('패널 카드: 배부름·주간 줄과 바닥 줄', () => {
+test('패널 카드: 세션·주간 줄과 바닥 줄', () => {
   const card = cardOf(meter(), { elapsedMs: 12 * 60000, cost: true, lang: 'ko', width: 10 })
   expect(card.rows).toEqual([
-    { kind: 'context', lead: '(•ᴗ•)', label: '배부름', bar: '▰▰▰▰▰▰▱▱▱▱', percent: '62%', level: 'ok', tail: '' },
+    { kind: 'context', lead: '(•ᴗ•)', label: '세션', bar: '▰▰▰▰▰▰▱▱▱▱', percent: '62%', level: 'ok', tail: '' },
     { kind: 'week', lead: '⚡', label: '주간', bar: '▰▰▰▰▱▱▱▱▱▱', percent: '41%', level: 'ok', tail: ` ↻ ${when('ko', resetMs)}` },
   ])
   expect(card.foot).toBe('⏱ 12분 · Opus 5.5 · 200k · $1.23')

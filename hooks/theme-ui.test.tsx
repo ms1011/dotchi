@@ -96,7 +96,7 @@ test('테마를 바꾸면 상태 줄의 하트·기호와 패널 색이 그 테�
   const texts = await paneTexts($)
   expect(texts.find(t => t.text === 'O')?.color).toBe('#555555')
   expect(texts.find(t => t.text.includes('62%'))?.color).toBe('#111111')
-  expect(texts.find(t => t.text === '배부름')?.color).toBe('#444444')
+  expect(texts.find(t => t.text === '세션')?.color).toBe('#444444')
 })
 
 test('없는 테마는 알려 주고 그대로', async ($, on) => {

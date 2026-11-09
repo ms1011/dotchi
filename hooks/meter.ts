@@ -7,7 +7,7 @@ import { say, UNITS, when } from './talk'
 import { DEFAULT_LOOK } from './theme'
 
 /**
- * 다마고치 계기판: 컨텍스트는 배부름(하트), 주간 한도는 ⚡.
+ * 다마고치 계기판: 세션 컨텍스트는 하트, 주간 한도는 ⚡.
  * 상태 줄은 글자만 받으므로 얼굴과 기호로 읽히게, 옆 패널은 파스텔 색까지
  */
 
@@ -20,7 +20,7 @@ export const FALLBACK_ACCENT = '#b8a6ff'
 export const DEFAULT_ICON = '🐾'
 
 /**
- * 기본 기준. 컨텍스트: 70%부터 배부르고 90%부터 꽉 찼다.
+ * 기본 기준. 컨텍스트: 70%부터 주의, 90%부터 위험.
  * 주간: 경고가 시작되는 80%부터 노랑, 95%부터 코랄. /dotchi line context|week 로 바꾼다
  */
 export const DEFAULT_GAUGE: Gauge = { context: { warn: 70, danger: 90 }, week: { warn: 80, danger: 95 } }
@@ -167,7 +167,7 @@ export const statusLine = (input: StatusInput): string | undefined => {
 
 export type CardRow = { kind: 'context' | 'week'; lead: string; label: string; bar: string; percent: string; level: Level; tail: string }
 
-/** 옆 패널의 상태 카드: 배부름·주간 막대 줄과, 시간·모델·창·비용 한 줄 */
+/** 옆 패널의 상태 카드: 세션·주간 막대 줄과, 시간·모델·창·비용 한 줄 */
 export const cardOf = (
   meter: Meter | null,
   options: { elapsedMs: number; cost: boolean; lang: Lang; width: number; gauge?: Gauge; look?: Look },
