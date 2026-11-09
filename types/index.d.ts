@@ -73,7 +73,10 @@ export type Settings = {
   gauge: Gauge
   /** 상태 줄 테마 id */
   theme: string
+  /** 진화: 주간 리셋 때 1단계로 돌아갈지, 한도가 없는 계정의 주간 달러 예산(null이면 함께한 날 수) */
+  grow: GrowRule
 }
+export type GrowRule = { reset: boolean; budgetUsd: number | null }
 /** 행 우선 32×32. 각 칸은 'rrggbb' (#없음, 소문자) 또는 null(투명) */
 export type Frame = (string | null)[][]
 /** 한 단계의 그림: 멈춘 그림 1장과 움직임 1~5컷 */

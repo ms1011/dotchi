@@ -26,6 +26,7 @@ test('normalizeSettings는 이상한 값을 기본값으로', () => {
     cost: false,
     gauge: { context: { warn: 70, danger: 90 }, week: { warn: 80, danger: 95 } },
     theme: 'pastel',
+    grow: { reset: true, budgetUsd: null },
   })
 })
 

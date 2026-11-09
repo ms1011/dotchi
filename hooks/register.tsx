@@ -453,6 +453,12 @@ export const register: Register = on => {
         return { text: lines.join('\n') }
       }
       case 'usage':
+      // 진화 명령은 다음 작업에서 잇는다
+      case 'grow':
+      case 'growReset':
+      case 'growBudget':
+      case 'album':
+      case 'evolve':
         return { text: t('usage') }
       case 'list': {
         characters = await loadCharacters($)

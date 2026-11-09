@@ -16,7 +16,7 @@ export const MESSAGES = {
   status: 'Now: {name} · Shown: {show} · One-liner after answers: {voice}',
   changed: 'Done. {status}',
   usage:
-    'Usage: /dotchi [character] · list · hatch [image path] · edit <character> · install <zip, folder or site id> · export <character> [--with-source] · share <character> [--as <id>] · unshare <character> · remove <character> · show [always|working|side] · voice [on|off] · lang [ko|en|ja|zh|auto] · limit [on|off] · notify [on|off|fix|after <seconds>] · rest [<hours> <tokens>|off] · line [full|mini|off] · line cost [on|off] · line context|week <warn%> <danger%>|reset · theme [list|<theme>|new [idea]|edit [theme]|set <key> <value>|install <file or site id>|export|share|unshare|remove <theme>]',
+    'Usage: /dotchi [character] · list · hatch [image path] · edit <character> · install <zip, folder or site id> · export <character> [--with-source] · share <character> [--as <id>] · unshare <character> · remove <character> · show [always|working|side] · voice [on|off] · lang [ko|en|ja|zh|auto] · limit [on|off] · notify [on|off|fix|after <seconds>] · rest [<hours> <tokens>|off] · line [full|mini|off] · line cost [on|off] · line context|week <warn%> <danger%>|reset · theme [list|<theme>|new [idea]|edit [theme]|set <key> <value>|install <file or site id>|export|share|unshare|remove <theme>] · grow [reset on|off|budget <usd>|off] · album · evolve <character>',
   unknownCharacter: "No character '{arg}'. See /dotchi list",
   listItem: '{mark}{id} ({name}) · {origin}',
   'origin.builtin': 'built-in',
