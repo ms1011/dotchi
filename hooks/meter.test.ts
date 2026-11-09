@@ -20,6 +20,7 @@ import {
   windowLabel,
 } from './meter'
 import type { Meter } from './meter'
+import { DEFAULT_LOOK } from './theme'
 
 const DAY = 86400000
 const RESET = '2026-11-09T00:00:00.000Z'
@@ -132,12 +133,12 @@ test('상태 줄: 갓 시작하면 0인 것은 다 숨긴다', () => {
   expect(statusLine({ ...base, meter: null, git: null })).toBe(undefined)
 })
 
-test('상태 줄: 세션이 차면 얼굴이 나오고, 꽉 차면 /compact를 권한다', () => {
+test('상태 줄: 기본(얼굴 없음)은 꽉 차면 /compact만 권한다', () => {
   expect(statusLine({ ...base, git: null, meter: meter({ context: { percent: 78, tokens: 1, window: 2 }, week: null }) })).toBe(
-    '🌰 ♥♥♥♥♡ 78% (•_•;)',
+    '🌰 ♥♥♥♥♡ 78%',
   )
   expect(statusLine({ ...base, git: null, meter: meter({ context: { percent: 93, tokens: 1, window: 2 }, week: null }) })).toBe(
-    '🌰 ♥♥♥♥♥ 93% (×_×) /compact',
+    '🌰 ♥♥♥♥♥ 93% /compact',
   )
 })
 
@@ -166,7 +167,7 @@ test('상태 줄 mini: 퍼센트와 브랜치만', () => {
 test('패널 카드: 세션·주간 줄과 바닥 줄', () => {
   const card = cardOf(meter(), { elapsedMs: 12 * 60000, cost: true, lang: 'ko', width: 10 })
   expect(card.rows).toEqual([
-    { kind: 'context', lead: '(•ᴗ•)', label: '세션', bar: '▰▰▰▰▰▰▱▱▱▱', percent: '62%', level: 'ok', tail: '' },
+    { kind: 'context', lead: '♥', label: '세션', bar: '▰▰▰▰▰▰▱▱▱▱', percent: '62%', level: 'ok', tail: '' },
     { kind: 'week', lead: '⚡', label: '주간', bar: '▰▰▰▰▱▱▱▱▱▱', percent: '41%', level: 'ok', tail: ` ↻ ${when('ko', resetMs)}` },
   ])
   expect(card.foot).toBe('⏱ 12분 · Opus 5.5 · 200k · $1.23')
@@ -178,7 +179,7 @@ test('패널 카드: 위험하면 /compact, 바닥날 것 같으면 하품과 �
     { elapsedMs: 0, cost: false, lang: 'ko', width: 10 },
   )
   expect(card.rows.map(r => [r.lead, r.level, r.tail])).toEqual([
-    ['(×_×)', 'danger', ' /compact'],
+    ['♥', 'danger', ' /compact'],
     ['⚡', 'danger', ` 🥱 ${when('ko', resetMs - DAY)}`],
   ])
   expect(card.foot).toBe('Opus 5.5 · 1M')
@@ -223,7 +224,7 @@ test('기준을 바꾸면 단계도 그 기준으로', () => {
 
 test('상태 줄과 카드는 설정한 기준을 따른다', () => {
   const gauge = { context: { warn: 50, danger: 60 }, week: { warn: 30, danger: 40 } }
-  expect(statusLine({ ...base, git: null, gauge })).toBe('🌰 ♥♥♥♡♡ 62% (×_×) /compact · ⚡ 41%')
+  expect(statusLine({ ...base, git: null, gauge })).toBe('🌰 ♥♥♥♡♡ 62% /compact · ⚡ 41%')
   const card = cardOf(meter(), { elapsedMs: 0, cost: false, lang: 'ko', width: 10, gauge })
   expect(card.rows.map(r => r.level)).toEqual(['danger', 'danger'])
 })
@@ -251,4 +252,13 @@ test('테마 모양: 하트·막대·얼굴·기호가 테마를 따른다', () 
     ['wk', '===-', ` zz ${when('ko', resetMs - DAY)}`],
   ])
   expect(card.foot?.startsWith('t 12분')).toBe(true)
+})
+
+test('얼굴이 없는 테마: 상태 줄엔 얼굴 없이, 패널 세션 줄은 하트 기호로 시작', () => {
+  const look = { ...DEFAULT_LOOK, faces: { ok: '', warn: '', danger: '' }, hearts: ['#', '.'] as [string, string] }
+  const meter = (percent: number) => ({ context: { percent, tokens: 1000, window: 200000 }, week: null, costUsd: null, model: null })
+  const base = { git: null, artifacts: [], icon: '🌰', mode: 'full', cost: false, elapsedMs: 0, lang: 'ko', look } as const
+  expect(statusLine({ ...base, meter: meter(78) })).toBe('🌰 ####. 78%')
+  expect(statusLine({ ...base, meter: meter(93) })).toBe('🌰 ##### 93% /compact')
+  expect(cardOf(meter(78), { elapsedMs: 0, cost: false, lang: 'ko', width: 10, look }).rows[0]!.lead).toBe('#')
 })

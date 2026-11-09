@@ -17,9 +17,9 @@
     "accent": "pet"
   },
   "faces": {
-    "ok": "(ᵔᴥᵔ)",
-    "warn": "(ᵕ﹏ᵕ;)",
-    "danger": "(×﹏×)"
+    "ok": "",
+    "warn": "",
+    "danger": ""
   },
   "hearts": [
     "🌕",
