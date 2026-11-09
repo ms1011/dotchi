@@ -152,6 +152,8 @@ export const fakeEngine = (
     contextTokens?: number
     /** $.session.model()의 답. 없으면 모델을 모른다(오류) */
     model?: string
+    /** $.session.usage()의 세션 비용(USD). 없으면 비용을 모른다 */
+    cost?: number
     /** /config의 행들 */
     config?: { key: string; value: unknown }[]
     /** config.set을 거절할지 */
@@ -173,7 +175,7 @@ export const fakeEngine = (
   const notified: { text: string; title?: string }[] = []
   const statuses: (string | undefined)[] = []
   const configRows = [...(options.config ?? [])]
-  const usage = { contextTokens: options.contextTokens }
+  const usage: { contextTokens?: number; cost?: number } = { contextTokens: options.contextTokens, cost: options.cost }
   const shell = simulateShell(files, options.zips ?? {}, zipsOut)
 
   on('store.get', (_, e) => ({ value: stored[e.key] }))
@@ -264,6 +266,7 @@ export const fakeEngine = (
       startedAt: 0,
       context: { window: 200000, ...(usage.contextTokens === undefined ? {} : { tokens: usage.contextTokens }) },
       rateLimits: [],
+      ...(usage.cost === undefined ? {} : { cost: { usd: usage.cost } }),
     },
   }))
   on('session.model', () => {

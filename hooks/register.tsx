@@ -25,6 +25,8 @@ import { addArtifact, artifactOf, gitLines, parseArtifacts } from './info'
 import { accentOf, cardOf, DEFAULT_ICON, iconOf, meterOf, parseNumstat, statusLine, textCols } from './meter'
 import type { LimitAlert, LimitSeen } from './limits'
 import { limitAlert } from './limits'
+import type { AlbumEntry, Grow, Reading, Stage } from './grow'
+import { noteStage, observe, parseGrow, recordAnswer, recordCost, seen, shownStage, weekStage } from './grow'
 import { shouldWarnRest } from './rest'
 import { DEFAULT_SETTINGS, normalizeSettings, parseDotchi } from './settings'
 import type { TalkKey } from './talk'
@@ -68,6 +70,56 @@ const touchedAtom = atom({ plugin: 'dotchi', key: 'touched' } as const, [] as st
 const alertAtom = atom({ plugin: 'dotchi', key: 'alert' } as const, null as { text: string; until: number } | null)
 const meterAtom = atom({ plugin: 'dotchi', key: 'meter' } as const, null as Meter | null)
 const minuteAtom = atom({ plugin: 'dotchi', key: 'minute' } as const, 0)
+const stageAtom = atom({ plugin: 'dotchi', key: 'stage' } as const, 1 as Stage)
+
+/** 진화 상태를 읽고-바꾸고-쓰기를 한 줄로 세운다 (측정·턴·쓰다듬기가 겹쳐도 잃지 않게) */
+let growLock: Promise<unknown> = Promise.resolve()
+async function growWith($: EngineInterface, fn: (grow: Grow) => Grow | Promise<Grow>): Promise<Grow> {
+  const turn = growLock.then(async () => {
+    const next = await fn(parseGrow(await $.store.get('grow')))
+    await $.store.set('grow', next)
+    return next
+  })
+  growLock = turn.catch(() => undefined)
+  return turn
+}
+
+/** 가장 최근의 주간 한도 읽기 (아직 없으면 none) */
+let lastReading: Reading = { kind: 'none' }
+
+/**
+ * 읽기를 반영해 단계를 다시 정한다. announce면 이번 주에 처음 오른 단계를 말한다
+ * (보이는 단계가 실제로 올랐을 때만: 리셋을 끈 사람의 펫은 이미 큰 단계일 수 있다)
+ */
+async function refreshStage(
+  $: EngineInterface,
+  announce: boolean,
+  evolvedText: (settings: Settings, stage: Stage) => string,
+): Promise<void> {
+  const settings = normalizeSettings(await read($, settingsAtom))
+  const now = await $.clock.now()
+  const before = Number(await read($, stageAtom)) as Stage
+  let evolved: Stage | null = null
+  const grow = await growWith($, g => {
+    const observed = observe(g, lastReading, now, settings.character).grow
+    const noted = noteStage(observed, weekStage(observed, lastReading, settings.grow.budgetUsd))
+    evolved = noted.evolved
+    return noted.grow
+  })
+  const stage = shownStage(grow, lastReading, settings.grow)
+  await update($, stageAtom, () => stage)
+  if (announce && evolved !== null && stage > before) {
+    const text = evolvedText(settings, stage)
+    await showAlert($, text)
+    $.ui.toast(text)
+  }
+}
+
+/** 측정의 한도 창들 → 진화 읽기 (주간 창이 없으면 none) */
+const readingOf = (windows: readonly { kind: string; percentUsed: number; resetsAt?: string }[]): Reading => {
+  const week = windows.find(w => w.kind === 'seven_day')
+  return week === undefined ? { kind: 'none' } : { kind: 'limit', percent: week.percentUsed, resetsAt: week.resetsAt ?? null }
+}
 
 /** /dotchi notify fix가 고르는 알림 경로 */
 const NOTIFY_CHANNEL = 'iterm2_with_bell'
@@ -331,6 +383,47 @@ export const register: Register = on => {
   let restWarned = false
   /** '배가 꽉 찼어요'는 위험 기준(기본 90%)을 넘을 때 한 번. 5 넘게 내려가면(/compact) 다시 */
   let stuffedWarned = false
+  /** 진화 알림 글: 지금 언어로 */
+  const evolvedText = (settings: Settings, stage: Stage) => {
+    lang = () => langOf(settings)
+    return talk('evolved', { name: nameFor(currentOf(settings)), stage: String(stage) })
+  }
+
+  /** /dotchi grow 응답 */
+  const growText = (grow: Grow, settings: Settings): string => {
+    const stage = shownStage(grow, lastReading, settings.grow)
+    const week = grow.week
+    const next = (at: string) => (weekStage(grow, lastReading, settings.grow.budgetUsd) < 3 ? t('growNext', { at }) : '')
+    const thresholds = (s: Stage, a: string, b: string) => (s === 1 ? a : b)
+    const current = weekStage(grow, lastReading, settings.grow.budgetUsd)
+    let detail: string
+    if (lastReading.kind === 'limit' || grow.source === 'limit') {
+      const percent = lastReading.kind === 'limit' ? lastReading.percent : (week?.limit?.percent ?? 0)
+      detail = t('growLimit', { percent: String(Math.floor(percent)) }) + next(thresholds(current, '33%', '66%'))
+    } else if (settings.grow.budgetUsd !== null) {
+      detail =
+        t('growBudget', { spent: (week?.spentUsd ?? 0).toFixed(2), budget: String(settings.grow.budgetUsd) }) +
+        next(thresholds(current, '33%', '66%'))
+    } else {
+      detail = t('growDays', { days: String(week?.days.length ?? 0) }) + next(thresholds(current, '2 days', '4 days'))
+    }
+    return [
+      t('growStage', { stage: String(stage), detail }),
+      t('growRule', {
+        reset: settings.grow.reset ? 'on' : 'off',
+        budget: settings.grow.budgetUsd === null ? 'off' : `$${settings.grow.budgetUsd}`,
+      }),
+    ].join('\n')
+  }
+
+  /** 앨범 한 줄 */
+  const albumLine = (entry: AlbumEntry): string => {
+    const ch = characters.find(c => c.meta.id === entry.pet)
+    const style = entry.style === null ? null : t(entry.style === 'owl' ? 'albumOwl' : entry.style === 'morning' ? 'albumMorning' : 'albumDay')
+    return [entry.start, ch === undefined ? entry.pet : nameFor(ch), '★'.repeat(entry.stage) + '☆'.repeat(3 - entry.stage), `♥ ${entry.pats}`, style]
+      .filter((part): part is string => part !== null)
+      .join(' · ')
+  }
 
   /** 컴퓨터 언어 (세션 시작 때 읽는다). 설정의 lang이 있으면 그쪽이 먼저 */
   let systemLang: Lang = 'en'
@@ -390,6 +483,17 @@ export const register: Register = on => {
     themes = await loadThemes($)
     if (saved.show === 'side') await openPane($, PANE_COLUMNS)
     await loadArtifacts($)
+    // 진화: 하루 넘게 못 봤으면 반기고, 이번 주 단계를 조용히 맞춘다
+    lastReading = readingOf((await $.session.usage().catch(() => null))?.rateLimits ?? [])
+    const now = await $.clock.now()
+    let welcome = false
+    await growWith($, g => {
+      const result = seen(g, now)
+      welcome = result.welcome
+      return result.grow
+    })
+    if (welcome) await showAlert($, talk('welcome'))
+    await refreshStage($, false, evolvedText)
     gitTimer?.cancel()
     gitTimer = $.clock.every(GIT_EVERY_MS, () => void refreshGit($, lang()).catch(() => undefined))
     // 큰 저장소에서도 세션 시작을 붙잡지 않게 기다리지 않는다
@@ -449,17 +553,52 @@ export const register: Register = on => {
           current.rest
             ? `Rest warning: after ${current.rest.hours} h away and ${tokens(current.rest.tokens)} tokens`
             : 'Rest warning: off',
+          t('growLine', {
+            stage: String(await read($, stageAtom)),
+            reset: current.grow.reset ? 'on' : 'off',
+            budget: current.grow.budgetUsd === null ? 'off' : `$${current.grow.budgetUsd}`,
+          }),
         ]
         return { text: lines.join('\n') }
       }
       case 'usage':
-      // 진화 명령은 다음 작업에서 잇는다
-      case 'grow':
-      case 'growReset':
-      case 'growBudget':
-      case 'album':
-      case 'evolve':
         return { text: t('usage') }
+      case 'grow':
+        return { text: growText(parseGrow(await $.store.get('grow')), current) }
+      case 'growReset':
+      case 'growBudget': {
+        const grow = command.kind === 'growReset' ? { ...current.grow, reset: command.on } : { ...current.grow, budgetUsd: command.usd }
+        const settings = { ...current, grow }
+        await saveSettings($, settings)
+        await refreshStage($, false, evolvedText)
+        $.ui.invalidate('ui.render')
+        await syncStatus($, lang())
+        return { text: growText(parseGrow(await $.store.get('grow')), settings) }
+      }
+      case 'album': {
+        characters = await loadCharacters($)
+        const album = parseGrow(await $.store.get('grow')).album
+        return { text: album.length === 0 ? t('albumEmpty') : [...album].reverse().map(albumLine).join('\n') }
+      }
+      case 'evolve': {
+        characters = await loadCharacters($)
+        const ch = resolveCharacter(command.target, characters, lang())
+        if (ch === null) return { text: t('unknownCharacter', { arg: command.target }) }
+        const template = await readPrompt($, 'tools/evolve-prompt.md')
+        if (template === null) return { text: t('promptMissing', { file: 'tools/evolve-prompt.md' }) }
+        const dir = ch.origin === 'builtin' ? await copyToUser($, ch) : ch.dir
+        const text = fill(template, {
+          root: $.plugin.root,
+          data: await dataDir($),
+          lang: lang(),
+          langName: LANG_NAMES[lang()],
+          id: ch.meta.id,
+          name: safeName(nameFor(ch), ch.meta.id),
+          dir,
+        })
+        await handToClaude($, text, t('promptMissing', { file: 'prompt' }))
+        return { text: t('evolveStarted', { name: nameFor(ch) }) }
+      }
       case 'list': {
         characters = await loadCharacters($)
         const active = currentOf(current)?.meta.id
@@ -877,6 +1016,8 @@ export const register: Register = on => {
     }
     await syncStatus($, lang())
     if (!e.changed.includes('rateLimits')) return result
+    lastReading = readingOf(e.rateLimits)
+    await refreshStage($, true, evolvedText)
     // 측정이 겹쳐 와도(서브에이전트 여럿) 읽고-계산하고-쓰는 사이에 끼어들지 못하게 줄을 세운다
     const turn = measureLock.then(async () => {
       const settings = normalizeSettings(await read($, settingsAtom))
@@ -986,6 +1127,16 @@ export const register: Register = on => {
     await update($, workingAtom, () => false)
 
     const result = await next(e)
+    if (e.reason === 'answer') {
+      const now = await $.clock.now()
+      const usd = (await $.session.usage().catch(() => null))?.cost?.usd
+      const sessionId = await $.session.id()
+      await growWith($, g => {
+        const answered = recordAnswer(g, now)
+        return seen(usd === undefined ? answered : recordCost(answered, sessionId, usd, now), now).grow
+      })
+    }
+    await refreshStage($, true, evolvedText)
     const settings = normalizeSettings(await read($, settingsAtom))
     lang = () => langOf(settings)
     if (settings.notify && e.reason === 'answer' && e.durationMs >= settings.notifyAfterSec * 1000) {

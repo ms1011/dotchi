@@ -117,6 +117,8 @@ declare module 'claude-code' {
       meter: Meter | null
       /** 분 단위 시계: 패널의 지난 시간을 1분마다 다시 그리게 */
       minute: number
+      /** 지금 보여 줄 진화 단계 */
+      stage: 1 | 2 | 3
     }
   }
 }

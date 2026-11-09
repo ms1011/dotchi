@@ -18,6 +18,12 @@ const KO = {
   gaugeFull: '배부름',
   gaugeWeek: '주간',
   stuffed: '배가 꽉 찼어요 ({percent}%)… /compact 할까요?',
+  evolved: '{name}이(가) {stage}단계로 자랐어요!',
+  welcome: '돌아왔군요! 기다리고 있었어요',
+  pat1: '헤헤, 좋아요',
+  pat2: '더 쓰다듬어 주세요!',
+  pat3: '기분 최고!',
+  stageLabel: '{n}단계',
 }
 
 export type TalkKey = keyof typeof KO
@@ -38,6 +44,12 @@ export const TALK: Record<Lang, Record<TalkKey, string>> = {
     gaugeFull: 'Full',
     gaugeWeek: 'Week',
     stuffed: "I'm stuffed ({percent}%)… /compact?",
+    evolved: '{name} grew to stage {stage}!',
+    welcome: "You're back! I've been waiting",
+    pat1: 'Hehe, that feels nice',
+    pat2: 'More pats, please!',
+    pat3: 'Best mood ever!',
+    stageLabel: 'Stage {n}',
   },
   ja: {
     limit: '週の上限 {percent}%！（{reset} リセット）',
@@ -53,6 +65,12 @@ export const TALK: Record<Lang, Record<TalkKey, string>> = {
     gaugeFull: '満腹',
     gaugeWeek: '週',
     stuffed: 'おなかいっぱい（{percent}%）… /compact しますか？',
+    evolved: '{name}が{stage}段階に育ちました！',
+    welcome: 'おかえり！待ってたよ',
+    pat1: 'えへへ、うれしい',
+    pat2: 'もっとなでて！',
+    pat3: 'ごきげん！',
+    stageLabel: '{n}段階',
   },
   zh: {
     limit: '每周额度已用 {percent}%！（{reset} 重置）',
@@ -68,6 +86,12 @@ export const TALK: Record<Lang, Record<TalkKey, string>> = {
     gaugeFull: '饱腹',
     gaugeWeek: '每周',
     stuffed: '吃得好撑（{percent}%）… 要 /compact 吗？',
+    evolved: '{name}成长到第{stage}阶段了！',
+    welcome: '你回来啦！我一直在等你',
+    pat1: '嘿嘿，好舒服',
+    pat2: '再摸摸我！',
+    pat3: '心情超好！',
+    stageLabel: '第{n}阶段',
   },
 }
 

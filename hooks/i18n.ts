@@ -72,6 +72,18 @@ export const MESSAGES = {
   themeAsExists: "You already have a theme called '{id}'",
   themeIdTaken: "'{id}' is already taken by another theme on the dotchi site. Try /dotchi theme share {target} --as {suggestion}",
   themeShared: 'Sent theme {name} ({id}) to the dotchi site. The check posts its result there in a minute: {issue}\nPage: {page}',
+  growStage: 'Stage {stage} of 3 · {detail}',
+  growLimit: 'weekly {percent}%',
+  growDays: '{days} days with Claude this week',
+  growBudget: '${spent} of ${budget} this week',
+  growNext: ' (next stage at {at})',
+  growRule: 'Weekly reset: {reset} · Budget: {budget}',
+  growLine: 'Growth: stage {stage} · reset {reset} · budget {budget}',
+  albumEmpty: 'No weeks in the album yet. Each weekly reset adds one',
+  albumOwl: 'night owl week',
+  albumMorning: 'early bird week',
+  albumDay: 'daytime week',
+  evolveStarted: 'Starting to add growth stages to {name}. Claude will ask you a few things next',
 }
 
 export type MessageKey = keyof typeof MESSAGES
