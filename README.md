@@ -96,7 +96,7 @@ Everything is under `/dotchi`.
 | `/dotchi theme <theme>` | Switch theme (id or name) |
 | `/dotchi theme new [idea]` | Make a theme with Claude: it asks for a mood, writes `theme.json`, checks it and shows a preview |
 | `/dotchi theme edit [theme]` | Touch up a theme with Claude (the current one if you leave it out) |
-| `/dotchi theme set <key> <value>` | Change one part of the current theme: `color.ok #8fd9b6`, `face.danger (×_×)`, `hearts ♥ ♡`, `bar ▰ ▱`, `symbol.week ⚡` … |
+| `/dotchi theme set <key> <value>` | Change one part of the current theme: `color.ok #8fd9b6`, `hearts ♥ ♡`, `bar ▰ ▱`, `symbol.week ⚡` … |
 | `/dotchi theme install <file or site id>` | Install a `theme.json`, or a theme from the site by id or link |
 | `/dotchi theme export <theme>` | Save it as `<id>.theme.json` in this folder |
 | `/dotchi theme share <theme> [--as <id>]` | Share a theme on the dotchi site |
@@ -113,9 +113,9 @@ Everything is under `/dotchi`.
 
 **Git and artifacts.** In the side panel the pet stands above the branch, the changed files (✎ marks the ones Claude edited) and the artifacts Claude published in this session. Without the panel, the status line shows a one-line summary.
 
-**Status line.** `🌰 ♥♥♥♡♡ 62% · ⚡ 41% · ⎇ main ↑2 · 3 files +120 −8 · 12m · 🔗 Report`. The hearts are how full the session's context is: from 70% they turn yellow, and at 90% coral, with the status line asking for `/compact` and the pet asking once. Themes like candy add a face here, such as `(•_•;)`. `⚡` is the weekly limit, and 🥱 means it runs out before the reset at this pace. Anything zero or unknown is left out. All these percentages can be changed with `/dotchi line context` and `/dotchi line week`. In the side panel the same numbers become pastel bars, the face takes your pet's own color, and the last line shows the session time, model and context size.
+**Status line.** `🌰 ♥♥♥♡♡ 62% · ⚡ 41% · ⎇ main ↑2 · 3 files +120 −8 · 12m · 🔗 Report`. The hearts are how full the session's context is: from 70% they turn yellow, and at 90% coral, with the status line asking for `/compact` and the pet asking once. `⚡` is the weekly limit, and 🥱 means it runs out before the reset at this pace. Anything zero or unknown is left out. All these percentages can be changed with `/dotchi line context` and `/dotchi line week`. In the side panel the same numbers become pastel bars, the heart in front takes your pet's own color, and the last line shows the session time, model and context size.
 
-**Themes.** A theme is only the look: five colors (`ok`, `warn`, `danger`, `dim`, `accent`, where an accent of `pet` means your pet's own color), three faces, the heart and bar glyphs, and four symbols. Your percentages stay yours. Themes live in `~/.claude/dotchi/themes/<id>/theme.json`; any part you leave out falls back to pastel. Changing a built-in theme makes your own copy with the same id, and removing that copy brings the built-in back. Check a file with `python3 tools/theme.py check <file>` and see it in color with `python3 tools/theme.py preview <file>`.
+**Themes.** A theme is only the look: five colors (`ok`, `warn`, `danger`, `dim`, `accent`, where an accent of `pet` means your pet's own color), three optional faces (the built-in themes use none), the heart and bar glyphs, and four symbols. Your percentages stay yours. Themes live in `~/.claude/dotchi/themes/<id>/theme.json`; any part you leave out falls back to pastel. Changing a built-in theme makes your own copy with the same id, and removing that copy brings the built-in back. Check a file with `python3 tools/theme.py check <file>` and see it in color with `python3 tools/theme.py preview <file>`.
 
 **Side panel.** `/dotchi show side` puts your pet in a panel on the right, about 20% of the width. It docks beside the conversation in fullscreen mode, so run `/tui fullscreen` once. Resize it with `Ctrl+X` then the arrow keys, and close it with `Ctrl+X` then `X`.
 
