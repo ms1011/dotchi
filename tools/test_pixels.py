@@ -163,3 +163,105 @@ class CheckTest(unittest.TestCase):
         self.assertEqual(pixels.main(['check', str(self.pack)]), 0)
         self.meta(format=2)
         self.assertEqual(pixels.main(['check', str(self.pack)]), 1)
+
+
+def write_stage_pack(pack):
+    """1단계 움직임 2컷 + 2·3단계 (색이 다 다르게)"""
+    stages = {
+        '2': {'idle': make_frame('222200'), 'work': [make_frame('222201'), make_frame('222202')]},
+        '3': {'idle': make_frame('333300'), 'work': [make_frame('333301'), make_frame('333302')]},
+    }
+    write_pack(pack, make_frame('111100'), [make_frame('111101'), make_frame('111102')])
+    art = json.loads((pack / 'art.json').read_text())
+    art['stages'] = stages
+    (pack / 'art.json').write_text(json.dumps(art))
+    (pack / 'lines.json').write_text(json.dumps({'en': {'spinner': ['a'], 'idle': ['b'], 'ending': ['c']}}))
+    return stages
+
+
+class StageTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.pack = Path(self.tmp.name) / 'bunny'
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def art(self):
+        return json.loads((self.pack / 'art.json').read_text())
+
+    def test_stage_grids_round_trip(self):
+        stages = write_stage_pack(self.pack)
+        d = pixels.export_pack(self.pack)
+        names = sorted(p.name for p in d.glob('*.txt'))
+        self.assertEqual(names, ['1.txt', '2.txt', 'idle.txt', 's2-1.txt', 's2-2.txt', 's2-idle.txt', 's3-1.txt', 's3-2.txt', 's3-idle.txt'])
+        (self.pack / 'art.json').unlink()
+        pixels.import_pack(self.pack)
+        self.assertEqual(self.art()['stages'], stages)
+
+    def test_import_without_stage_grids_has_no_stages(self):
+        write_pack(self.pack, make_frame(), [make_frame('222222')])
+        pixels.export_pack(self.pack)
+        pixels.import_pack(self.pack)
+        self.assertNotIn('stages', self.art())
+
+    def test_stage_idle_missing_uses_first(self):
+        write_pack(self.pack, make_frame(), [make_frame('222222')])
+        d = pixels.export_pack(self.pack)
+        (d / 's3-1.txt').write_text(pixels.frame_to_grid(make_frame('333333')))
+        pixels.import_pack(self.pack)
+        self.assertEqual(self.art()['stages'], {'3': {'idle': make_frame('333333'), 'work': [make_frame('333333')]}})
+
+    def test_stage_overlay_stacks(self):
+        write_pack(self.pack, make_frame('111111'), [make_frame('111112'), make_frame('111113')])
+        pixels.export_pack(self.pack)
+        two = [[None] * 32 for _ in range(32)]
+        two[0][0] = 'aaaaaa'
+        three = [[None] * 32 for _ in range(32)]
+        three[0][1] = 'bbbbbb'
+        three[11][9] = 'cccccc'
+        over2, over3 = Path(self.tmp.name) / 'o2.txt', Path(self.tmp.name) / 'o3.txt'
+        over2.write_text(pixels.frame_to_grid(two))
+        over3.write_text(pixels.frame_to_grid(three))
+        self.assertEqual(pixels.main(['stage', str(self.pack), '2', str(over2)]), 0)
+        self.assertEqual(pixels.main(['stage', str(self.pack), '3', str(over3)]), 0)
+        pixels.import_pack(self.pack)
+        art = self.art()
+        for stage, extra in (('2', {(0, 0): 'aaaaaa'}), ('3', {(0, 0): 'aaaaaa', (0, 1): 'bbbbbb', (11, 9): 'cccccc'})):
+            frames = [art['stages'][stage]['idle'], *art['stages'][stage]['work']]
+            self.assertEqual(len(frames), 3)
+            for base, frame in zip([art['idle'], *art['work']], frames):
+                for y in range(32):
+                    for x in range(32):
+                        self.assertEqual(frame[y][x], extra.get((y, x), base[y][x]), (stage, y, x))
+
+    def test_stage_overlay_bad_stage(self):
+        write_pack(self.pack, make_frame(), [make_frame()])
+        pixels.export_pack(self.pack)
+        over = Path(self.tmp.name) / 'o.txt'
+        over.write_text(pixels.frame_to_grid(make_frame()))
+        self.assertEqual(pixels.main(['stage', str(self.pack), '4', str(over)]), 1)
+
+    def test_check_rejects_bad_stages(self):
+        write_stage_pack(self.pack)
+        self.assertEqual(pixels.check_pack(self.pack), [])
+        art = self.art()
+        for bad in ({'4': art['stages']['2']}, [art['stages']['2']], {'2': {'idle': make_frame(), 'work': [make_frame()] * 6}}):
+            art['stages'] = bad
+            (self.pack / 'art.json').write_text(json.dumps(art))
+            self.assertTrue(any('stages' in p for p in pixels.check_pack(self.pack)), bad)
+
+    def test_preview_and_gif_with_stages(self):
+        write_stage_pack(self.pack)
+        self.assertTrue(pixels.preview_pack(self.pack).exists())
+        gif = pixels.gif_pack(self.pack)
+        with Image.open(gif) as img:
+            self.assertEqual(img.n_frames, 3 * 2 * 2)
+
+    def test_reserved_ids(self):
+        write_stage_pack(self.pack)
+        meta = json.loads((self.pack / 'dotchi.json').read_text())
+        for word in ('grow', 'album', 'evolve'):
+            meta['id'] = word
+            (self.pack / 'dotchi.json').write_text(json.dumps(meta))
+            self.assertTrue(any('id' in p for p in pixels.check_pack(self.pack)), word)
