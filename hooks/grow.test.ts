@@ -173,3 +173,10 @@ test('parseGrow는 망가진 값을 기본값으로', () => {
   const g = recordPat(observe(EMPTY_GROW, limit(40), NOW, 'p').grow)
   expect(parseGrow(JSON.parse(JSON.stringify(g)))).toEqual(g)
 })
+
+test('리셋 시각이 지났는데 아직 새 읽기가 없으면 1단계로 보인다 (넘기지는 않는다)', () => {
+  const g = observe(EMPTY_GROW, limit(70), NOW, 'p').grow
+  expect(weekStage(g, NONE, null, NOW)).toBe(3)
+  expect(weekStage(g, NONE, null, Date.parse(RESET) + HOUR)).toBe(1)
+  expect(observe(g, NONE, Date.parse(RESET) + HOUR, 'p').rolled).toBe(null)
+})

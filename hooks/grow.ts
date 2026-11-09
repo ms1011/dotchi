@@ -139,18 +139,25 @@ export const observe = (grow: Grow, reading: Reading, now: number, pet: string):
   return roll(grow, pet, calWeek(now))
 }
 
-/** 이번 주 단계 (리셋 설정 무시). 한도가 있으면 한도, 아니면 예산, 아니면 날 수 */
-export const weekStage = (grow: Grow, reading: Reading, budgetUsd: number | null): Stage => {
+/**
+ * 이번 주 단계 (리셋 설정 무시). 한도가 있으면 한도, 아니면 예산, 아니면 날 수.
+ * 한도 주의 리셋 시각이 지났는데 새 읽기가 아직 없으면 1단계 (주를 넘기는 건 읽기가 올 때)
+ */
+export const weekStage = (grow: Grow, reading: Reading, budgetUsd: number | null, now = Date.now()): Stage => {
   if (reading.kind === 'limit') return stageOfPercent(reading.percent)
   const week = grow.week
-  if (grow.source === 'limit') return week?.limit ? stageOfPercent(week.limit.percent) : 1
+  if (grow.source === 'limit') {
+    if (!week?.limit) return 1
+    const resetAt = week.limit.resetsAt === null ? NaN : Date.parse(week.limit.resetsAt)
+    return Number.isFinite(resetAt) && resetAt <= now ? 1 : stageOfPercent(week.limit.percent)
+  }
   if (week === null) return 1
   if (budgetUsd !== null && budgetUsd > 0) return stageOfPercent((week.spentUsd / budgetUsd) * 100)
   return stageOfDays(week.days.length)
 }
 
-export const shownStage = (grow: Grow, reading: Reading, settings: GrowSettings): Stage => {
-  const stage = weekStage(grow, reading, settings.budgetUsd)
+export const shownStage = (grow: Grow, reading: Reading, settings: GrowSettings, now = Date.now()): Stage => {
+  const stage = weekStage(grow, reading, settings.budgetUsd, now)
   return settings.reset ? stage : maxStage(stage, grow.kept)
 }
 

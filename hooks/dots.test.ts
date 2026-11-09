@@ -112,3 +112,8 @@ test('usedColumns는 단계까지 합친다', () => {
   const art = parseArt(JSON.stringify({ ...base, idle: one, work: [one], stages: { '3': { idle: three, work: [three] } } }))!
   expect(usedColumns(art)).toEqual([5, 20])
 })
+
+test('stages: null은 단계 없음 (pixels.py check와 같게)', () => {
+  const art = parseArt(JSON.stringify({ ...base, stages: null }))
+  expect(art !== null && !('stages' in art)).toBe(true)
+})

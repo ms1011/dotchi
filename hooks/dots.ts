@@ -66,7 +66,8 @@ export const parseArt = (text: string): Art | null => {
   if (art === null || typeof art !== 'object') return null
   const first = parseStage(art)
   if (first === null) return null
-  if (art.stages === undefined) return { width: SIZE, height: SIZE, ...first }
+  // null도 단계 없음 (pixels.py check와 같게)
+  if (art.stages === undefined || art.stages === null) return { width: SIZE, height: SIZE, ...first }
   const stages = art.stages as unknown
   if (typeof stages !== 'object' || stages === null || Array.isArray(stages)) return null
   const out: NonNullable<Art['stages']> = {}

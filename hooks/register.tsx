@@ -107,18 +107,20 @@ async function refreshStage(
   $: EngineInterface,
   announce: boolean,
   evolvedText: (settings: Settings, stage: Stage) => string,
+  fresh: Reading = { kind: 'none' },
 ): Promise<void> {
   const settings = normalizeSettings(await read($, settingsAtom))
   const now = await $.clock.now()
   const before = Number(await read($, stageAtom)) as Stage
   let evolved: Stage | null = null
   const grow = await growWith($, g => {
-    const observed = observe(g, lastReading, now, settings.character).grow
-    const noted = noteStage(observed, weekStage(observed, lastReading, settings.grow.budgetUsd))
+    // 주 넘김은 방금 온 측정(fresh)으로만: 이 세션의 오래된 읽기는 다른 세션이 쓴 값보다 낮을 수 있다
+    const observed = observe(g, fresh, now, settings.character).grow
+    const noted = noteStage(observed, weekStage(observed, lastReading, settings.grow.budgetUsd, now))
     evolved = noted.evolved
     return noted.grow
   })
-  const stage = shownStage(grow, lastReading, settings.grow)
+  const stage = shownStage(grow, lastReading, settings.grow, now)
   await update($, stageAtom, () => stage)
   if (announce && evolved !== null && stage > before) {
     const text = evolvedText(settings, stage)
@@ -403,24 +405,25 @@ export const register: Register = on => {
   /** 진화 알림 글: 지금 언어로 */
   const evolvedText = (settings: Settings, stage: Stage) => {
     lang = () => langOf(settings)
-    return talk('evolved', { name: nameFor(currentOf(settings)), stage: String(stage) })
+    const name = nameFor(currentOf(settings))
+    // 3단계는 상이 아니라 '이제 아껴 쓰자'는 신호
+    return stage === 3 ? talk('grownUp', { name }) : talk('evolved', { name, stage: String(stage) })
   }
 
   /** /dotchi grow 응답 */
   const growText = (grow: Grow, settings: Settings): string => {
     const stage = shownStage(grow, lastReading, settings.grow)
     const week = grow.week
+    // 다음 단계 안내는 함께한 날 수에만: 사용량(한도·예산)을 목표처럼 내밀지 않는다
     const next = (at: string) => (weekStage(grow, lastReading, settings.grow.budgetUsd) < 3 ? t('growNext', { at }) : '')
     const thresholds = (s: Stage, a: string, b: string) => (s === 1 ? a : b)
     const current = weekStage(grow, lastReading, settings.grow.budgetUsd)
     let detail: string
     if (lastReading.kind === 'limit' || grow.source === 'limit') {
       const percent = lastReading.kind === 'limit' ? lastReading.percent : (week?.limit?.percent ?? 0)
-      detail = t('growLimit', { percent: String(Math.floor(percent)) }) + next(thresholds(current, '33%', '66%'))
+      detail = t('growLimit', { percent: String(Math.floor(percent)) })
     } else if (settings.grow.budgetUsd !== null) {
-      detail =
-        t('growBudget', { spent: (week?.spentUsd ?? 0).toFixed(2), budget: String(settings.grow.budgetUsd) }) +
-        next(thresholds(current, '33%', '66%'))
+      detail = t('growBudget', { spent: (week?.spentUsd ?? 0).toFixed(2), budget: String(settings.grow.budgetUsd) })
     } else {
       detail = t('growDays', { days: String(week?.days.length ?? 0) }) + next(thresholds(current, '2 days', '4 days'))
     }
@@ -503,6 +506,7 @@ export const register: Register = on => {
     // 진화: 하루 넘게 못 봤으면 반기고, 이번 주 단계를 조용히 맞춘다
     lastReading = readingOf((await $.session.usage().catch(() => null))?.rateLimits ?? [])
     const now = await $.clock.now()
+    // 세션 시작의 읽기는 방금 온 것이라 주 넘김에도 쓴다
     let welcome = false
     await growWith($, g => {
       const result = seen(g, now)
@@ -510,7 +514,7 @@ export const register: Register = on => {
       return result.grow
     })
     if (welcome) await showAlert($, talk('welcome'))
-    await refreshStage($, false, evolvedText)
+    await refreshStage($, false, evolvedText, lastReading)
     gitTimer?.cancel()
     gitTimer = $.clock.every(GIT_EVERY_MS, () => void refreshGit($, lang()).catch(() => undefined))
     // 큰 저장소에서도 세션 시작을 붙잡지 않게 기다리지 않는다
@@ -535,6 +539,10 @@ export const register: Register = on => {
     if (saved.show === 'side') await openPane($, PANE_COLUMNS)
     await update($, touchedAtom, () => [])
     await loadArtifacts($)
+    // 세션 상태가 지워졌다: 진화 단계를 저장된 값에서 다시 맞춘다
+    lastReading = readingOf((await $.session.usage().catch(() => null))?.rateLimits ?? [])
+    await refreshStage($, false, evolvedText, lastReading)
+    await syncStatus($, lang())
     void refreshMeter($)
       .then(() => refreshGit($, lang()))
       .catch(() => undefined)
@@ -1034,7 +1042,7 @@ export const register: Register = on => {
     // 진화 단계를 먼저 맞춰서 상태 줄의 별이 이번 측정을 따르게
     if (e.changed.includes('rateLimits')) {
       lastReading = readingOf(e.rateLimits)
-      await refreshStage($, true, evolvedText)
+      await refreshStage($, true, evolvedText, lastReading)
     }
     await syncStatus($, lang())
     if (!e.changed.includes('rateLimits')) return result
@@ -1149,10 +1157,12 @@ export const register: Register = on => {
     const result = await next(e)
     if (e.reason === 'answer') {
       const now = await $.clock.now()
+      const normalizedCharacter = normalizeSettings(await read($, settingsAtom)).character
       const usd = (await $.session.usage().catch(() => null))?.cost?.usd
       const sessionId = await $.session.id()
       await growWith($, g => {
-        const answered = recordAnswer(g, now)
+        // 달력 주가 넘어갔으면 먼저 넘긴다: 월요일 첫 답변은 새 주에
+        const answered = recordAnswer(observe(g, { kind: 'none' }, now, normalizedCharacter).grow, now)
         return seen(usd === undefined ? answered : recordCost(answered, sessionId, usd, now), now).grow
       })
     }

@@ -23,6 +23,7 @@ const setup = (on: On, options: { store?: Record<string, unknown>; cost?: number
   on('session.measure', (_, e) => ({ changed: e.changed }))
   on('turn.start', (_, e) => ({ turnId: e.turnId }))
   on('turn.complete', (_, e) => ({ text: e.answer }))
+  on('classic.SessionStart', () => ({}))
   return engine
 }
 
@@ -47,16 +48,18 @@ const bubble = async ($: Engine): Promise<string | undefined> => {
 }
 const reply = async ($: Engine, args: string) => ((await dotchi($, args)) as { text: string }).text
 
-test('한도 40% → 70%로 오르면 자랐다고 말하고 토스트, 3단계', async ($, on) => {
+test('한도 40% → 70%로 오르면 다 컸다고(이제 아껴 쓰자) 말하고 토스트, 3단계', async ($, on) => {
   const { clock, toasts } = setup(on)
   await clock.set(NOW)
   await $.session.start(SESSION)
   await $.session.measure(measure(40))
   expect(await bubble($)).toBe(undefined)
   await $.session.measure(measure(70))
-  expect(await bubble($)).toMatch(/3단계로 자랐어요/)
-  expect(toasts.some(t => /3단계로 자랐어요/.test(t))).toBe(true)
-  expect(await reply($, 'grow')).toMatch(/Stage 3 of 3/)
+  expect(await bubble($)).toMatch(/다 컸어요! 이번 주는 천천히 가요/)
+  expect(toasts.some(t => /다 컸어요/.test(t))).toBe(true)
+  const text = await reply($, 'grow')
+  expect(text).toMatch(/Stage 3 of 3/)
+  expect(text).not.toMatch(/next stage/)
 })
 
 test('처음 읽기가 70%면 조용히 3단계', async ($, on) => {
@@ -136,4 +139,52 @@ test('evolve는 없는 펫이면 알려 준다', async ($, on) => {
   await $.session.start(SESSION)
   expect(await reply($, 'evolve nobody')).toMatch(/nobody/)
   expect(await reply($, '')).toMatch(/Growth: stage 1/)
+})
+
+test('2단계로 오르면 자랐다고 말한다, 한도 주는 다음 단계를 목표로 내밀지 않는다', async ($, on) => {
+  const { clock } = setup(on)
+  await clock.set(NOW)
+  await $.session.start(SESSION)
+  await $.session.measure(measure(10))
+  await $.session.measure(measure(40))
+  expect(await bubble($)).toMatch(/2단계로 자랐어요/)
+  expect(await reply($, 'grow')).not.toMatch(/next stage/)
+})
+
+test('/clear 뒤에도 저장된 단계를 다시 읽는다', async ($, on) => {
+  const { clock, stored } = setup(on)
+  await clock.set(NOW)
+  await $.session.start(SESSION)
+  await $.session.measure(measure(10))
+  // 다른 세션이 이번 주를 70%까지 올려 두었다
+  const grow = JSON.parse(JSON.stringify(stored.grow)) as { week: { limit: { percent: number }; peak: number }; kept: number }
+  grow.week.limit.percent = 70
+  grow.week.peak = 3
+  grow.kept = 3
+  stored.grow = grow
+  await $.classic.SessionStart({ source: 'clear' })
+  expect(await reply($, '')).toMatch(/Growth: stage 3/)
+})
+
+test('이 세션의 오래된 읽기로 주를 넘기지 않는다 (다른 세션이 더 높게 써 둠)', async ($, on) => {
+  const { clock, stored } = setup(on)
+  await clock.set(NOW)
+  await $.session.start(SESSION)
+  await $.session.measure(measure(40))
+  const grow = JSON.parse(JSON.stringify(stored.grow)) as { week: { limit: { percent: number } } }
+  grow.week.limit.percent = 50
+  stored.grow = grow
+  await $.turn.complete({ ...answer, reason: 'aborted', isAborted: true } as unknown as typeof answer)
+  await dotchi($, 'grow budget 10')
+  expect(await reply($, 'album')).toMatch(/No weeks in the album yet/)
+})
+
+test('월요일 첫 답변은 새 주에 센다', async ($, on) => {
+  const { clock } = setup(on)
+  await clock.set(new Date(2026, 10, 15, 23).getTime())
+  await $.session.start(SESSION)
+  await $.turn.complete(answer)
+  await clock.set(new Date(2026, 10, 16, 0, 30).getTime())
+  await $.turn.complete(answer)
+  expect(await reply($, 'grow')).toMatch(/1 days with Claude this week/)
 })
