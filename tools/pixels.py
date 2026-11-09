@@ -7,7 +7,8 @@
   python3 tools/pixels.py gif <pack>       <pack>/preview.gif (터미널 모습, dotchi.json 의 frameMs)
   python3 tools/pixels.py check <pack>     팩 형식 1 검사 (mod가 읽을 수 있는지). 문제가 있으면 종료 코드 1
   python3 tools/pixels.py stage <pack> <n> <overlay.txt>
-                                           (n−1)단계 격자 위에 덧그림을 얹어 n단계(2·3) 격자를 쓴다
+                                           (n−1)단계 격자 위에 덧그림을 얹어 n단계(2·3) 격자를 쓴다.
+                                           움직임 컷마다 덧그림 둘레가 움직인 만큼(±2칸) 따라 옮긴다
 
 격자 이름: 1단계는 idle.txt, 1.txt…5.txt. n단계(2·3)는 s<n>-idle.txt, s<n>-1.txt…s<n>-5.txt.
 """
@@ -172,9 +173,44 @@ def import_pack(pack):
     return save_art(pack, first[0], first[1], stages)
 
 
-def overlay(frame, over):
-    """덧그림의 투명하지 않은 칸만 위에 얹는다"""
-    return [[o if o is not None else c for c, o in zip(row, over_row)] for row, over_row in zip(frame, over)]
+def overlay(frame, over, dy=0, dx=0):
+    """덧그림의 투명하지 않은 칸만 (dy, dx)만큼 옮겨 위에 얹는다"""
+    out = [row[:] for row in frame]
+    for y, row in enumerate(over):
+        for x, c in enumerate(row):
+            ty, tx = y + dy, x + dx
+            if c is not None and 0 <= ty < SIZE and 0 <= tx < SIZE:
+                out[ty][tx] = c
+    return out
+
+
+FOLLOW = 2
+FOLLOW_MARGIN = 3
+
+
+def follow_shift(idle, frame, over):
+    """덧그림 둘레(여백 3칸)의 그림이 idle에서 frame으로 얼마나 옮겨졌는지 (dy, dx), 각 ±2칸 안.
+    가장 잘 맞는 쪽, 같으면 덜 움직인 쪽"""
+    cells = [(y, x) for y in range(SIZE) for x in range(SIZE) if over[y][x] is not None]
+    if not cells:
+        return 0, 0
+    y0 = max(0, min(y for y, _ in cells) - FOLLOW_MARGIN)
+    y1 = min(SIZE - 1, max(y for y, _ in cells) + FOLLOW_MARGIN)
+    x0 = max(0, min(x for _, x in cells) - FOLLOW_MARGIN)
+    x1 = min(SIZE - 1, max(x for _, x in cells) + FOLLOW_MARGIN)
+
+    def at(f, y, x):
+        return f[y][x] if 0 <= y < SIZE and 0 <= x < SIZE else None
+
+    best = None
+    for dy in range(-FOLLOW, FOLLOW + 1):
+        for dx in range(-FOLLOW, FOLLOW + 1):
+            miss = sum(1 for y in range(y0, y1 + 1) for x in range(x0, x1 + 1)
+                       if at(idle, y, x) != at(frame, y + dy, x + dx))
+            key = (miss, abs(dy) + abs(dx))
+            if best is None or key < best[0]:
+                best = (key, dy, dx)
+    return best[1], best[2]
 
 
 def stage_pack(pack, stage, overlay_path):
@@ -196,7 +232,8 @@ def stage_pack(pack, stage, overlay_path):
     idle, work = below
     (d / f'{prefix}idle.txt').write_text(frame_to_grid(overlay(idle, over)))
     for n, frame in enumerate(work, start=1):
-        (d / f'{prefix}{n}.txt').write_text(frame_to_grid(overlay(frame, over)))
+        dy, dx = follow_shift(idle, frame, over)
+        (d / f'{prefix}{n}.txt').write_text(frame_to_grid(overlay(frame, over, dy, dx)))
     return d
 
 

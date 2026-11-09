@@ -265,3 +265,31 @@ class StageTest(unittest.TestCase):
             meta['id'] = word
             (self.pack / 'dotchi.json').write_text(json.dumps(meta))
             self.assertTrue(any('id' in p for p in pixels.check_pack(self.pack)), word)
+
+
+class FollowTest(unittest.TestCase):
+    """덧그림은 컷마다 그 자리 그림이 움직인 만큼 따라간다"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.pack = Path(self.tmp.name) / 'bunny'
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_overlay_follows_a_bounce(self):
+        idle = make_frame('111111')
+        down = [[None] * 32] + [row[:] for row in idle[:-1]]
+        write_pack(self.pack, idle, [idle, down])
+        pixels.export_pack(self.pack)
+        hat = [[None] * 32 for _ in range(32)]
+        hat[9][12] = 'aaaaaa'
+        over = Path(self.tmp.name) / 'o.txt'
+        over.write_text(pixels.frame_to_grid(hat))
+        pixels.stage_pack(self.pack, '2', over)
+        pixels.import_pack(self.pack)
+        two = json.loads((self.pack / 'art.json').read_text())['stages']['2']
+        self.assertEqual(two['idle'][9][12], 'aaaaaa')
+        self.assertEqual(two['work'][0][9][12], 'aaaaaa')
+        self.assertEqual(two['work'][1][10][12], 'aaaaaa')
+        self.assertEqual(two['work'][1][9][12], None)
