@@ -1,4 +1,4 @@
-import type { Art, Frame } from '../types'
+import type { Art, Frame, StageArt } from '../types'
 
 /** Raster에서 터미널 기본색 */
 export const TRANSPARENT = 0x01000000
@@ -63,17 +63,47 @@ export const parseArt = (text: string): Art | null => {
     return null
   }
   const art = raw as Partial<Art> | null
-  if (art === null || typeof art !== 'object' || !isFrame(art.idle)) return null
-  if (!Array.isArray(art.work) || art.work.length < 1 || art.work.length > MAX_FRAMES) return null
-  if (!art.work.every(isFrame)) return null
-  return { width: SIZE, height: SIZE, idle: art.idle, work: art.work }
+  if (art === null || typeof art !== 'object') return null
+  const first = parseStage(art)
+  if (first === null) return null
+  if (art.stages === undefined) return { width: SIZE, height: SIZE, ...first }
+  const stages = art.stages as unknown
+  if (typeof stages !== 'object' || stages === null || Array.isArray(stages)) return null
+  const out: NonNullable<Art['stages']> = {}
+  for (const [key, value] of Object.entries(stages)) {
+    if (key !== '2' && key !== '3') return null
+    const stage = parseStage(value)
+    if (stage === null) return null
+    out[key] = stage
+  }
+  return Object.keys(out).length === 0 ? { width: SIZE, height: SIZE, ...first } : { width: SIZE, height: SIZE, ...first, stages: out }
 }
 
-/** 모든 컷(멈춘 그림 포함)에서 쓰인 가로 범위 [처음, 끝]. 비어 있으면 전체 */
+/** 한 단계: 멈춘 그림 32×32와 움직임 1~5컷 */
+const parseStage = (value: unknown): StageArt | null => {
+  const stage = value as Partial<StageArt> | null
+  if (stage === null || typeof stage !== 'object' || !isFrame(stage.idle)) return null
+  if (!Array.isArray(stage.work) || stage.work.length < 1 || stage.work.length > MAX_FRAMES) return null
+  if (!stage.work.every(isFrame)) return null
+  return { idle: stage.idle, work: stage.work }
+}
+
+/** 단계의 그림. 그 단계 그림이 없으면 바로 아래 단계 */
+export const stageArt = (art: Art, stage: 1 | 2 | 3): StageArt => {
+  if (stage === 3 && art.stages?.['3'] !== undefined) return art.stages['3']
+  if (stage >= 2 && art.stages?.['2'] !== undefined) return art.stages['2']
+  return { idle: art.idle, work: art.work }
+}
+
+/** 그림이 있는 단계 수 (1단계 + 실린 단계) */
+export const stageCount = (art: Art): 1 | 2 | 3 => (1 + Object.keys(art.stages ?? {}).length) as 1 | 2 | 3
+
+/** 모든 단계의 모든 컷(멈춘 그림 포함)에서 쓰인 가로 범위 [처음, 끝]. 비어 있으면 전체. 진화해도 띠 폭이 그대로이게 */
 export const usedColumns = (art: Art): [number, number] => {
   let from = SIZE
   let to = -1
-  for (const frame of [art.idle, ...art.work]) {
+  const stages = Object.values(art.stages ?? {}).flatMap(stage => (stage === undefined ? [] : [stage.idle, ...stage.work]))
+  for (const frame of [art.idle, ...art.work, ...stages]) {
     for (const row of frame) {
       row.forEach((c, x) => {
         if (c === null) return

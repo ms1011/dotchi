@@ -76,7 +76,10 @@ export type Settings = {
 }
 /** 행 우선 32×32. 각 칸은 'rrggbb' (#없음, 소문자) 또는 null(투명) */
 export type Frame = (string | null)[][]
-export type Art = { width: 32; height: 32; idle: Frame; work: Frame[] }
+/** 한 단계의 그림: 멈춘 그림 1장과 움직임 1~5컷 */
+export type StageArt = { idle: Frame; work: Frame[] }
+/** idle·work는 1단계. stages는 선택: 2·3단계 (빠진 단계는 바로 아래 단계 그림) */
+export type Art = { width: 32; height: 32; idle: Frame; work: Frame[]; stages?: Partial<Record<'2' | '3', StageArt>> }
 export type LineSet = { spinner: string[]; idle: string[]; ending: string[] }
 export type PackLines = Partial<Record<Lang, LineSet>>
 export type PackMeta = {
