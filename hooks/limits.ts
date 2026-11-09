@@ -49,7 +49,7 @@ export const forecast = (kind: string, percent: number, resetsAt: number | null,
  * resetsAt이 있다 없다 하는 것은 리셋이 아니다. 리셋 시각이 몇 시간 이상 뒤로 밀렸거나
  * (resetsAt을 모를 때를 위해) 사용률이 크게 떨어졌을 때만
  */
-const isReset = (before: { resetsAt: string | null; percent?: number }, now: SessionRateLimit): boolean => {
+export const isReset = (before: { resetsAt: string | null; percent?: number }, now: SessionRateLimit): boolean => {
   const was = parseTime(before.resetsAt ?? undefined)
   const next = parseTime(now.resetsAt)
   if (was !== null && next !== null && next - was >= HOUR) return true
